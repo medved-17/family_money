@@ -1,0 +1,274 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Наши деньги</title>
+<meta name="description" content="Семейный трекер расходов Сони и Никиты">
+<meta name="theme-color" content="#f6f5f1" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#141412" media="(prefers-color-scheme: dark)">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="Наши деньги">
+<link rel="manifest" href="./manifest.webmanifest">
+<link rel="icon" href="./icons/icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="./icons/icon-180.png">
+<link rel="stylesheet" href="./css/app.css">
+</head>
+<body>
+
+<!-- ══════════ ОНБОРДИНГ ══════════ -->
+<div id="onboarding" class="onboarding hidden">
+  <!-- Шаг 1: пароль -->
+  <section id="ob-password" class="ob-step">
+    <div class="ob-hero">
+      <div class="ob-logo">💛</div>
+      <h1>Наши деньги</h1>
+      <p class="ob-sub">Общий трекер расходов<br>Сони и Никиты</p>
+    </div>
+    <form id="ob-password-form" class="ob-form" autocomplete="off">
+      <label class="field">
+        <span class="field-label" id="ob-password-label">Пароль общего аккаунта</span>
+        <input type="password" id="ob-password-input" class="input" inputmode="text"
+               placeholder="••••••" autocomplete="current-password" required minlength="4">
+      </label>
+      <p class="ob-hint" id="ob-password-hint"></p>
+      <p class="ob-error hidden" id="ob-password-error">Неверный пароль, попробуйте ещё раз</p>
+      <button type="submit" class="btn btn-primary btn-big" id="ob-password-btn">Продолжить</button>
+    </form>
+  </section>
+
+  <!-- Шаг 2: выбор профиля -->
+  <section id="ob-profile" class="ob-step hidden">
+    <div class="ob-hero">
+      <h1>Кто вы?</h1>
+      <p class="ob-sub">Выбор сохранится на этом телефоне —<br>больше спрашивать не будем</p>
+    </div>
+    <div class="profile-cards">
+      <button class="profile-card" data-profile="sonya">
+        <span class="profile-ava ava-sonya">С</span>
+        <span class="profile-name">Соня</span>
+      </button>
+      <button class="profile-card" data-profile="nikita">
+        <span class="profile-ava ava-nikita">Н</span>
+        <span class="profile-name">Никита</span>
+      </button>
+    </div>
+  </section>
+</div>
+
+<!-- ══════════ ПРИЛОЖЕНИЕ ══════════ -->
+<div id="app" class="app hidden">
+
+  <!-- ─── Главная ─── -->
+  <main id="screen-home" class="screen active">
+    <header class="topbar">
+      <div class="topbar-title">
+        <span class="hello" id="home-hello">Привет!</span>
+        <h1>Наши деньги</h1>
+      </div>
+      <button class="icon-btn" id="home-sync-badge" title="Синхронизация">
+        <span id="sync-icon">☁️</span>
+      </button>
+    </header>
+
+    <div class="period-nav" id="home-period-nav">
+      <button class="period-arrow" data-dir="-1" aria-label="Раньше">‹</button>
+      <button class="period-label" id="home-period-label">Август</button>
+      <button class="period-arrow" data-dir="1" aria-label="Позже">›</button>
+    </div>
+
+    <section class="total-card" id="home-total-card">
+      <span class="total-label">Потрачено вместе</span>
+      <div class="total-amount" id="home-total">0 ₽</div>
+      <div class="total-tips" id="home-tips-line"></div>
+      <div class="authors-split" id="home-authors"></div>
+    </section>
+
+    <section class="card" id="home-cats-card">
+      <div class="card-head">
+        <h2>По категориям</h2>
+        <button class="link-btn" data-goto="stats">Аналитика</button>
+      </div>
+      <div id="home-cats" class="cat-bars"></div>
+    </section>
+
+    <section class="card">
+      <div class="card-head">
+        <h2>Последние траты</h2>
+        <button class="link-btn" data-goto="history">Все</button>
+      </div>
+      <div id="home-recent" class="tx-list"></div>
+    </section>
+    <div class="screen-pad"></div>
+  </main>
+
+  <!-- ─── История ─── -->
+  <main id="screen-history" class="screen">
+    <header class="topbar">
+      <h1>История</h1>
+      <button class="icon-btn" id="history-clear-filters" title="Сбросить фильтры">✕</button>
+    </header>
+    <div class="filters" id="history-filters">
+      <label class="filter-chip">
+        <span id="f-period-text">Месяц</span>
+        <select id="f-period">
+          <option value="week">Неделя</option>
+          <option value="month" selected>Месяц</option>
+          <option value="year">Год</option>
+          <option value="all">Всё время</option>
+        </select>
+      </label>
+      <label class="filter-chip">
+        <span id="f-author-text">Оба</span>
+        <select id="f-author">
+          <option value="">Оба</option>
+          <option value="sonya">Соня</option>
+          <option value="nikita">Никита</option>
+        </select>
+      </label>
+      <label class="filter-chip">
+        <span id="f-cat-text">Категории</span>
+        <select id="f-cat"><option value="">Все категории</option></select>
+      </label>
+      <label class="filter-chip">
+        <span id="f-cur-text">Валюты</span>
+        <select id="f-cur">
+          <option value="">Все валюты</option>
+          <option value="EUR">EUR €</option>
+          <option value="USD">USD $</option>
+          <option value="TRY">TRY ₺</option>
+          <option value="RUB">RUB ₽</option>
+        </select>
+      </label>
+    </div>
+    <div class="history-summary" id="history-summary"></div>
+    <div id="history-list"></div>
+    <div class="screen-pad"></div>
+  </main>
+
+  <!-- ─── Аналитика ─── -->
+  <main id="screen-stats" class="screen">
+    <header class="topbar">
+      <h1>Аналитика</h1>
+      <button class="icon-btn" id="stats-export-btn" title="Экспорт">⬇︎</button>
+    </header>
+
+    <div class="period-nav" id="stats-period-nav">
+      <button class="period-arrow" data-dir="-1" aria-label="Раньше">‹</button>
+      <button class="period-label" id="stats-period-label">Август</button>
+      <button class="period-arrow" data-dir="1" aria-label="Позже">›</button>
+    </div>
+    <div class="seg" id="stats-seg">
+      <button data-mode="month" class="on">Месяц</button>
+      <button data-mode="year">Год</button>
+      <button data-mode="all">Всё</button>
+    </div>
+
+    <div id="stats-body"></div>
+    <div class="screen-pad"></div>
+  </main>
+
+  <!-- ─── Настройки ─── -->
+  <main id="screen-settings" class="screen">
+    <header class="topbar"><h1>Настройки</h1></header>
+    <div id="settings-body"></div>
+    <div class="screen-pad"></div>
+  </main>
+
+  <!-- ─── Таб-бар ─── -->
+  <nav class="tabbar">
+    <button class="tab on" data-screen="home">
+      <span class="tab-ico">🏠</span><span>Главная</span>
+    </button>
+    <button class="tab" data-screen="history">
+      <span class="tab-ico">🧾</span><span>История</span>
+    </button>
+    <button class="fab" id="fab-add" aria-label="Добавить трату">＋</button>
+    <button class="tab" data-screen="stats">
+      <span class="tab-ico">📊</span><span>Аналитика</span>
+    </button>
+    <button class="tab" data-screen="settings">
+      <span class="tab-ico">⚙️</span><span>Настройки</span>
+    </button>
+  </nav>
+</div>
+
+<!-- ══════════ ЛИСТ ДОБАВЛЕНИЯ ТРАТЫ ══════════ -->
+<div id="sheet-backdrop" class="sheet-backdrop hidden"></div>
+<div id="add-sheet" class="sheet hidden" role="dialog" aria-label="Новая трата">
+  <div class="sheet-grip"></div>
+  <header class="sheet-head">
+    <button class="sheet-cancel" id="add-cancel">Отмена</button>
+    <h2 id="add-title">Новая трата</h2>
+    <button class="sheet-danger hidden" id="add-delete">Удалить</button>
+  </header>
+
+  <div class="sheet-scroll">
+    <!-- Сумма и чаевые -->
+    <div class="amount-row">
+      <button class="amount-box on" id="amount-box" data-target="amount">
+        <span class="amount-box-label">Сумма</span>
+        <span class="amount-value" id="amount-display">0</span>
+      </button>
+      <button class="amount-box amount-box-tips" id="tips-box" data-target="tips">
+        <span class="amount-box-label">Чаевые</span>
+        <span class="amount-value amount-value-tips" id="tips-display">+</span>
+      </button>
+    </div>
+
+    <!-- Валюта -->
+    <div class="chip-row" id="currency-row">
+      <button class="chip" data-cur="EUR">€ EUR</button>
+      <button class="chip" data-cur="USD">$ USD</button>
+      <button class="chip" data-cur="TRY">₺ TRY</button>
+      <button class="chip" data-cur="RUB">₽ RUB</button>
+    </div>
+
+    <!-- Категории -->
+    <div class="cat-scroller" id="cat-picker"></div>
+
+    <!-- Комментарий и дата -->
+    <div class="meta-row">
+      <input type="text" id="add-note" class="note-input" placeholder="Комментарий…" maxlength="120">
+      <label class="date-chip">
+        <span id="add-date-text">Сейчас</span>
+        <input type="datetime-local" id="add-date">
+      </label>
+    </div>
+    <div class="rate-line hidden" id="rate-line">
+      <span id="rate-text"></span>
+      <button class="link-btn" id="rate-edit">Изменить</button>
+    </div>
+  </div>
+
+  <!-- Клавиатура -->
+  <div class="keypad" id="keypad">
+    <button data-k="1">1</button><button data-k="2">2</button><button data-k="3">3</button>
+    <button data-k="4">4</button><button data-k="5">5</button><button data-k="6">6</button>
+    <button data-k="7">7</button><button data-k="8">8</button><button data-k="9">9</button>
+    <button data-k="," class="k-dim">,</button><button data-k="0">0</button><button data-k="back" class="k-dim">⌫</button>
+  </div>
+  <button class="btn btn-primary btn-save" id="add-save">Сохранить</button>
+</div>
+
+<!-- ══════════ ЛИСТ ЭКСПОРТА ══════════ -->
+<div id="export-sheet" class="sheet sheet-auto hidden" role="dialog" aria-label="Экспорт">
+  <div class="sheet-grip"></div>
+  <header class="sheet-head">
+    <button class="sheet-cancel" id="export-cancel">Закрыть</button>
+    <h2>Экспорт</h2><span></span>
+  </header>
+  <div class="export-body">
+    <p class="export-note" id="export-period-note"></p>
+    <button class="btn btn-secondary btn-big" id="export-xlsx">📗 Скачать Excel</button>
+    <button class="btn btn-secondary btn-big" id="export-pdf">📄 Скачать PDF-отчёт</button>
+  </div>
+</div>
+
+<div id="toast" class="toast hidden"></div>
+
+<script type="module" src="./js/app.js"></script>
+</body>
+</html>

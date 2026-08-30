@@ -1,0 +1,76 @@
+# Наши деньги 💛
+
+Семейный трекер расходов Сони и Никиты. PWA: ставится на экран iPhone, работает офлайн,
+синхронизируется между двумя телефонами.
+
+**Возможности:** 4 валюты (EUR/USD/TRY/RUB) с историческими курсами, чаевые отдельным полем,
+автор у каждой траты, категории (свои + встроенные), аналитика, экспорт в Excel и PDF,
+резервные копии, офлайн-режим.
+
+## Запуск локально
+
+Любой статический сервер, например:
+
+```bash
+python3 -m http.server 8000
+```
+
+и открыть http://localhost:8000.
+
+## Деплой на GitHub Pages (бесплатно)
+
+1. Создать **публичный** репозиторий на GitHub и запушить код:
+   ```bash
+   git remote add origin https://github.com/<логин>/money.git
+   git push -u origin main
+   ```
+2. На GitHub: **Settings → Pages → Source: Deploy from a branch → Branch: main / (root) → Save**.
+3. Через ~1 минуту приложение доступно по адресу `https://<логин>.github.io/money/`.
+4. На iPhone: открыть этот адрес в Safari → **Поделиться → На экран «Домой»**.
+
+Обновление: просто `git push` — Pages пересобирается автоматически.
+
+> GitHub Pages — статический хостинг. Приложение полностью работает и без сервера
+> (данные хранятся на телефоне), а для синхронизации между телефонами подключается
+> бесплатный Firebase — см. ниже.
+
+## Синхронизация между телефонами (бесплатно, ~10 минут)
+
+Используется Firebase (план Spark — бесплатный, для двух пользователей лимиты не достижимы).
+
+1. Зайти на https://console.firebase.google.com → **Add project** (Analytics можно выключить).
+2. **Build → Authentication → Get started → Email/Password → Enable**.
+   Во вкладке **Users → Add user** создать общий аккаунт (например, `family@example.com` + пароль).
+3. **Build → Firestore Database → Create database** (production mode, регион `europe-west`).
+   Во вкладке **Rules** вставить и опубликовать:
+   ```
+   rules_version = '2';
+   service cloud.firestore {
+     match /databases/{database}/documents {
+       match /spaces/{uid}/{document=**} {
+         allow read, write: if request.auth != null && request.auth.uid == uid;
+       }
+     }
+   }
+   ```
+4. **Project settings (⚙️) → Your apps → Web (</>)** → зарегистрировать приложение →
+   скопировать объект `firebaseConfig` в формате JSON, например:
+   ```json
+   {"apiKey":"...","authDomain":"...","projectId":"...","appId":"..."}
+   ```
+5. В приложении на **каждом** телефоне: **Настройки → Синхронизация → Вставить конфиг
+   Firebase**, затем **Войти в общий аккаунт** (e-mail и пароль из шага 2).
+
+После этого все траты автоматически синхронизируются в обе стороны, в том числе
+внесённые офлайн. Конфликт правок решается в пользу последнего изменения.
+
+## Как устроено
+
+- `js/store.js` — состояние и CRUD (IndexedDB — источник истины на устройстве, offline-first)
+- `js/sync.js` — опциональный синк с Firebase Firestore (LWW-слияние по `updatedAt`, tombstone-удаление)
+- `js/rates.js` — курсы валют (open.er-api.com), у каждой операции — снимок курсов на момент записи
+- `js/xlsx.js` — генератор настоящего .xlsx без зависимостей (ZIP + OOXML)
+- `js/pdf.js` — PDF-отчёт: страницы рисуются на canvas (кириллица ок) и упаковываются в PDF
+- `sw.js` — офлайн-кэш оболочки приложения
+
+Никаких сборщиков и зависимостей: чистый HTML/CSS/JS, ES-модули.
