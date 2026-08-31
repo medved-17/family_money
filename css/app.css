@@ -214,7 +214,7 @@ button svg, .set-row-ico svg { width: 20px; height: 20px; }
   text-align: left; border: 1px solid rgba(255, 246, 241, .14);
 }
 .author-pill .ava { width: 29px; height: 29px; font-size: 12px; flex: none; }
-.author-pill-info { min-width: 0; }
+.author-pill-info { min-width: 0; display: flex; flex-direction: column; align-items: flex-start; }
 .author-pill-name { font-size: 11px; opacity: .82; font-weight: 600; }
 .author-pill-sum { font-size: 14px; font-weight: 700; white-space: nowrap; }
 

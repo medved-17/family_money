@@ -88,10 +88,7 @@ export function renderHome() {
   $('home-authors').innerHTML = ['sonya', 'nikita'].map(a => `
     <div class="author-pill">
       <span class="ava ava-${a}">${AUTHORS[a].letter}</span>
-      <span class="author-pill-info">
-        <span class="author-pill-name">${AUTHORS[a].name}</span><br>
-        <span class="author-pill-sum">${fmtMoney(round2(s.byAuthor[a] || 0), base())}</span>
-      </span>
+      <span class="author-pill-info"><span class="author-pill-name">${AUTHORS[a].name}</span><span class="author-pill-sum">${fmtMoney(round2(s.byAuthor[a] || 0), base())}</span></span>
     </div>`).join('');
 
   // топ категорий
@@ -429,7 +426,9 @@ export function keypadPress(k) {
   }
   sheet[key] = v;
   renderSheet();
-  if (navigator.vibrate) navigator.vibrate(3);
+  if (navigator.vibrate && navigator.userActivation?.hasBeenActive) {
+    try { navigator.vibrate(3); } catch { /* не критично */ }
+  }
 }
 
 export async function saveSheet() {
