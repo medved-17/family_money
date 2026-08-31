@@ -1,6 +1,6 @@
 // Точка входа: онбординг, навигация, привязка событий
 
-import { initStore, state, subscribe, setPassword, checkPassword, setUnlocked, setProfile, addCategory } from './store.js';
+import { initStore, state, subscribe, setPassword, checkPassword, setUnlocked, setProfile, addCategory, saveSettings, saveBalances } from './store.js';
 import { refreshRates } from './rates.js';
 import { initSync, syncState } from './sync.js';
 import {
@@ -31,6 +31,9 @@ function injectIcons() {
   $('stats-export-btn').innerHTML = I.download;
   $('export-xlsx').insertAdjacentHTML('afterbegin', I.table);
   $('export-pdf').insertAdjacentHTML('afterbegin', I.doc);
+  $('home-card-prev').innerHTML = I.back;
+  $('home-card-next').innerHTML = I.fwd;
+  $('home-balance-edit').innerHTML = I.pencil;
 }
 
 let currentScreen = 'home';
@@ -51,6 +54,14 @@ function render(what = currentScreen) {
   if (what === 'history' || what === 'all') renderHistory();
   if (what === 'stats' || what === 'all') renderStats();
   if (what === 'settings' || what === 'all') renderSettings();
+}
+
+function updateHeroNav() {
+  const c = $('home-card-carousel');
+  const wrap = c.closest('.hero-carousel-wrap');
+  const atEnd = c.scrollLeft > c.clientWidth * 0.5;
+  wrap.classList.toggle('at-start', !atEnd);
+  wrap.classList.toggle('at-end', atEnd);
 }
 
 // ─── Онбординг ───
@@ -186,6 +197,32 @@ function bindEvents() {
 
   // ─── лист добавления ───
   $('fab-add').addEventListener('click', () => openAddSheet());
+  updateHeroNav();
+  $('home-card-prev').addEventListener('click', () => {
+    $('home-card-carousel').scrollTo({ left: 0, behavior: 'smooth' });
+  });
+  $('home-card-next').addEventListener('click', () => {
+    const c = $('home-card-carousel');
+    c.scrollTo({ left: c.children[1].offsetLeft, behavior: 'smooth' });
+  });
+  $('home-card-carousel').addEventListener('scroll', () => requestAnimationFrame(updateHeroNav), { passive: true });
+  $('home-balance-edit').addEventListener('click', async (e) => {
+    e.stopPropagation();
+    const cur = await showPicker({
+      title: 'Исходная сумма',
+      value: 'USD',
+      options: ['USD', 'TRY', 'RUB', 'EUR'].map(c => ({ value: c, label: `${c} ${CUR_SYMBOL[c]}` })),
+    });
+    if (!cur) return;
+    const balances = state.settings.balances || {};
+    const raw = prompt(`Сколько всего было изначально в ${cur}?`, String(balances[cur] || '').replace('.', ','));
+    if (raw === null) return;
+    const value = parseFloat(raw.replace(',', '.').replace(/\s/g, ''));
+    if (!isFinite(value) || value < 0) { toast('Введите сумму от 0'); return; }
+    await saveBalances({ [cur]: value });
+    renderHome();
+    toast(`Исходная сумма ${cur} сохранена`);
+  });
   $('add-cancel').addEventListener('click', closeAddSheet);
   // свайп вниз закрывает шторки
   makeDraggable($('add-sheet'), closeAddSheet);
@@ -204,11 +241,12 @@ function bindEvents() {
   $('amount-box').addEventListener('click', () => { sheet.target = 'amount'; renderSheet(); });
   $('tips-box').addEventListener('click', () => { sheet.target = 'tips'; renderSheet(); });
 
-  $('currency-row').addEventListener('click', (e) => {
+  $('currency-row').addEventListener('click', async (e) => {
     const c = e.target.closest('.chip');
     if (!c) return;
     sheet.currency = c.dataset.cur;
     sheet.manualRate = null;
+    await saveSettings({ lastCurrency: sheet.currency });
     renderSheet();
   });
 

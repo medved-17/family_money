@@ -36,6 +36,8 @@ export const state = {
     },
     // выключенные валюты не показываются при добавлении траты (евро включается в настройках)
     hiddenCurrencies: ['EUR'],
+    balances: { USD: 0, TRY: 0, RUB: 0, EUR: 0 },
+    balancesUpdatedAt: null,
   },
   profile: null,       // 'sonya' | 'nikita' — локально для устройства (AUTH-04)
   unlocked: false,
@@ -86,6 +88,14 @@ export async function saveSettings(patch) {
   setCustomRates(state.settings.customRates);
   await db.setMeta('settings', { ...state.settings });
   notify('settings');
+}
+
+export async function saveBalances(balances, updatedAt = new Date().toISOString()) {
+  state.settings.balances = { ...state.settings.balances, ...balances };
+  state.settings.balancesUpdatedAt = updatedAt;
+  await db.setMeta('settings', { ...state.settings });
+  notify('settings');
+  queueSync();
 }
 
 // ─── Аутентификация (локальный режим): хэш пароля, DATA-04 ───
@@ -195,7 +205,7 @@ export function categoriesByUsage() {
 }
 
 // ─── Слияние при синхронизации: LWW по updatedAt (SYNC-06) ───
-export async function mergeRemote(remoteExpenses, remoteCategories) {
+export async function mergeRemote(remoteExpenses, remoteCategories, remoteWallet = null) {
   let changed = false;
   const byId = new Map(state.expenses.map(e => [e.id, e]));
   const toWrite = [];
@@ -219,6 +229,13 @@ export async function mergeRemote(remoteExpenses, remoteCategories) {
   }
   if (catWrite.length) await db.putCategories(catWrite);
 
+  if (remoteWallet?.balances && (remoteWallet.updatedAt || '') > (state.settings.balancesUpdatedAt || '')) {
+    state.settings.balances = { ...state.settings.balances, ...remoteWallet.balances };
+    state.settings.balancesUpdatedAt = remoteWallet.updatedAt;
+    await db.setMeta('settings', { ...state.settings });
+    changed = true;
+  }
+
   if (changed) notify('expenses');
   return changed;
 }
@@ -234,7 +251,7 @@ export function backupJSON() {
     app: 'family-money',
     version: 1,
     exportedAt: new Date().toISOString(),
-    settings: { baseCurrency: state.settings.baseCurrency },
+    settings: { baseCurrency: state.settings.baseCurrency, balances: state.settings.balances },
     categories: state.categories,
     expenses: state.expenses,
   }, null, 2);

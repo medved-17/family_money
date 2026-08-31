@@ -45,6 +45,30 @@ function authorDotColor(a) {
   return a === 'sonya' ? 'var(--sonya)' : 'var(--nikita)';
 }
 
+function convertMoney(amount, from, to) {
+  if (from === to) return amount;
+  const direct = getCustomRate(from, to);
+  if (direct) return amount * direct;
+  const reverse = getCustomRate(to, from);
+  if (reverse) return amount / reverse;
+  return amount * rateToBase(getCachedRates().perUSD, from, to);
+}
+
+function walletSummary() {
+  const balances = state.settings.balances || {};
+  const spent = { USD: 0, TRY: 0, RUB: 0, EUR: 0 };
+  for (const e of visibleExpenses()) {
+    spent[e.currency] = (spent[e.currency] || 0) + (e.amount || 0) + (e.tips || 0);
+  }
+  const remaining = {};
+  for (const cur of ['USD', 'TRY', 'RUB', 'EUR']) {
+    remaining[cur] = (Number(balances[cur]) || 0) - (spent[cur] || 0);
+  }
+  const totalUSD = Object.entries(remaining)
+    .reduce((sum, [cur, value]) => sum + convertMoney(value, cur, 'USD'), 0);
+  return { balances, spent, remaining, totalUSD };
+}
+
 // ─────────────── ГЛАВНАЯ ───────────────
 let heroLast = null, heroAnim = 0;
 
@@ -96,6 +120,21 @@ export function renderHome() {
       <span class="ava ava-${a}">${AUTHORS[a].letter}</span>
       <span class="author-pill-info"><span class="author-pill-name">${AUTHORS[a].name}</span><span class="author-pill-sum">${nMoney(round2(s.byAuthor[a] || 0), base())}</span></span>
     </div>`).join('');
+
+  const wallet = walletSummary();
+  $('home-remaining-total').innerHTML = heroMoneyHTML(wallet.totalUSD, 'USD');
+  const hasBalances = Object.values(wallet.balances).some(v => Number(v) > 0);
+  $('home-remaining-line').textContent = hasBalances
+    ? 'после всех записанных трат'
+    : 'введите запасы валют в настройках';
+  $('home-remaining-pills').innerHTML = ['TRY', 'RUB', 'EUR'].map(cur => {
+    const value = round2(wallet.remaining[cur] || 0);
+    return `
+    <div class="remaining-pill ${value < 0 ? 'negative' : ''}">
+      <span class="remaining-pill-name">${CUR_SYMBOL[cur]} ${cur}</span>
+      <span class="remaining-pill-sum num">${nMoney(value, cur)}</span>
+    </div>`;
+  }).join('');
 
   // топ категорий
   const top = s.cats.slice(0, 4);

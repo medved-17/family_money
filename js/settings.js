@@ -2,7 +2,7 @@
 
 import {
   state, saveSettings, setProfile, setPassword, checkPassword,
-  visibleExpenses, addCategory, updateCategory, backupJSON, restoreBackup,
+  visibleExpenses, addCategory, updateCategory, backupJSON, restoreBackup, saveBalances,
 } from './store.js';
 import { db } from './db.js';
 import { AUTHORS, CUR_SYMBOL, CURRENCIES, fmtNum, escapeHtml, toast, downloadBlob } from './util.js';
@@ -28,6 +28,7 @@ export function renderSettings() {
   const prof = AUTHORS[state.profile];
   const rates = getCachedRates();
   const cred = getCred();
+  const balances = state.settings.balances || {};
 
   const catRows = state.categories.filter(c => !c.deleted).map(c => `
     <div class="cat-manage-row">
@@ -61,6 +62,14 @@ export function renderSettings() {
           <span class="set-row-value num">${s.baseCurrency} ${CUR_SYMBOL[s.baseCurrency]}</span>
           <span class="set-row-chev">${I.fwd}</span>
         </button>
+        ${['USD', 'TRY', 'RUB', 'EUR'].map(cur => `
+        <button class="set-row" data-balance="${cur}">
+          <span class="set-row-ico num">${CUR_SYMBOL[cur]}</span>
+          <span class="set-row-label">Запас ${cur}
+            <span class="set-row-sub">Для карточки «Осталось»</span></span>
+          <span class="set-row-value num">${fmtNum(Number(balances[cur]) || 0)} ${CUR_SYMBOL[cur]}</span>
+          <span class="set-row-chev">${I.fwd}</span>
+        </button>`).join('')}
       </div>
     </div>
 
@@ -205,6 +214,18 @@ function bindSettings() {
     renderSettings();
     toast(`Базовая валюта: ${next}`);
   };
+
+  document.querySelectorAll('[data-balance]').forEach(b => b.onclick = async () => {
+    const cur = b.dataset.balance;
+    const balances = state.settings.balances || {};
+    const raw = prompt(`Сколько всего есть в ${cur}?`, String(balances[cur] || '').replace('.', ','));
+    if (raw === null) return;
+    const value = parseFloat(raw.replace(',', '.').replace(/\s/g, ''));
+    if (!isFinite(value) || value < 0) { toast('Введите сумму от 0'); return; }
+    await saveBalances({ [cur]: value });
+    renderSettings();
+    toast(`Запас ${cur} сохранён`);
+  });
 
   // курсы валюты по датам
   document.querySelectorAll('[data-cur-rate]').forEach(b => b.onclick = () =>

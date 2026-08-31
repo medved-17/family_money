@@ -95,6 +95,7 @@ function connect(app, fs, uid) {
   // подписка на удалённые изменения
   const expCol = fs.collection(dbi, 'spaces', uid, 'expenses');
   const catCol = fs.collection(dbi, 'spaces', uid, 'categories');
+  const walletRef = fs.doc(dbi, 'spaces', uid, 'wallet', 'balances');
   fs.onSnapshot(expCol, snap => {
     const remote = snap.docs.map(d => d.data());
     mergeRemote(remote, []).then(() => {
@@ -106,6 +107,13 @@ function connect(app, fs, uid) {
     const remote = snap.docs.map(d => d.data());
     mergeRemote([], remote);
   });
+  fs.onSnapshot(walletRef, snap => {
+    if (!snap.exists()) return;
+    mergeRemote([], [], snap.data()).then(() => {
+      syncState.lastSyncAt = new Date();
+      notify('sync');
+    });
+  }, err => { syncState.error = 'Ошибка чтения кошелька'; console.warn(err); notify('sync'); });
 
   schedulePush();
 }
@@ -123,7 +131,8 @@ async function pushAll() {
     const lastPush = localStorage.getItem('fm-last-push') || '';
     const dirtyExp = state.expenses.filter(e => (e.updatedAt || '') > lastPush);
     const dirtyCat = state.categories.filter(c => (c.updatedAt || '') > lastPush);
-    if (!dirtyExp.length && !dirtyCat.length) return;
+    const dirtyWallet = (state.settings.balancesUpdatedAt || '') > lastPush;
+    if (!dirtyExp.length && !dirtyCat.length && !dirtyWallet) return;
 
     const batchLimit = 400;
     for (let i = 0; i < dirtyExp.length; i += batchLimit) {
@@ -139,6 +148,12 @@ async function pushAll() {
         batch.set(fs.doc(dbi, 'spaces', uid, 'categories', c.id), sanitize(c));
       }
       await batch.commit();
+    }
+    if (dirtyWallet) {
+      await fs.setDoc(fs.doc(dbi, 'spaces', uid, 'wallet', 'balances'), sanitize({
+        balances: state.settings.balances || {},
+        updatedAt: state.settings.balancesUpdatedAt,
+      }));
     }
     localStorage.setItem('fm-last-push', new Date().toISOString());
     syncState.lastSyncAt = new Date();

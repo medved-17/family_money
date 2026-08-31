@@ -93,12 +93,25 @@
       <button class="period-arrow" data-dir="1" aria-label="Позже"></button>
     </div>
 
-    <section class="total-card" id="home-total-card">
-      <span class="total-label">Потрачено вместе</span>
-      <div class="total-amount" id="home-total">0 ₽</div>
-      <div class="total-tips" id="home-tips-line"></div>
-      <div class="authors-split" id="home-authors"></div>
-    </section>
+    <div class="hero-carousel-wrap">
+      <button class="hero-nav hero-nav-left" id="home-card-prev" aria-label="Показать потрачено"></button>
+      <div class="hero-carousel" id="home-card-carousel">
+        <section class="total-card" id="home-total-card">
+          <span class="total-label">Потрачено вместе</span>
+          <div class="total-amount" id="home-total">0 ₽</div>
+          <div class="total-tips" id="home-tips-line"></div>
+          <div class="authors-split" id="home-authors"></div>
+        </section>
+        <section class="total-card remaining-card" id="home-remaining-card">
+          <button class="card-edit" id="home-balance-edit" aria-label="Изменить исходную сумму"></button>
+          <span class="total-label">Осталось всего</span>
+          <div class="total-amount" id="home-remaining-total">0 $</div>
+          <div class="total-tips" id="home-remaining-line"></div>
+          <div class="remaining-pills" id="home-remaining-pills"></div>
+        </section>
+      </div>
+      <button class="hero-nav hero-nav-right" id="home-card-next" aria-label="Показать остаток"></button>
+    </div>
 
     <section class="card" id="home-cats-card">
       <div class="card-head">
