@@ -27,6 +27,7 @@ function injectIcons() {
     b.innerHTML = b.dataset.dir === '-1' ? I.back : I.fwd;
   });
   document.querySelector('#keypad [data-k="back"]').innerHTML = I.back;
+  document.querySelector('.date-chip').insertAdjacentHTML('afterbegin', I.calendar);
   $('stats-export-btn').innerHTML = I.download;
   $('export-xlsx').insertAdjacentHTML('afterbegin', I.table);
   $('export-pdf').insertAdjacentHTML('afterbegin', I.doc);
@@ -224,6 +225,10 @@ function bindEvents() {
 
   $('add-date').addEventListener('change', (e) => {
     if (e.target.value) { sheet.spentAt = new Date(e.target.value); renderSheet(); }
+  });
+  // на десктопе прозрачный input сам не открывает календарь — подталкиваем
+  $('add-date').addEventListener('click', (e) => {
+    try { e.target.showPicker?.(); } catch { /* уже открыт или не поддерживается */ }
   });
 
   $('rate-edit').addEventListener('click', () => {

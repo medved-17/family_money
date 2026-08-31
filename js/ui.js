@@ -376,9 +376,12 @@ export function strToNum(s) {
 export function renderSheet() {
   // сумма и чаевые
   const amountView = sheet.amountStr || '0';
+  const caret = '<span class="caret"></span>';
   $('amount-display').innerHTML =
-    `${narrow(fmtEntry(amountView))} <span class="amount-cur">${CUR_SYMBOL[sheet.currency]}</span>`;
-  $('tips-display').innerHTML = sheet.tipsStr ? narrow(fmtEntry(sheet.tipsStr)) : '+';
+    `${narrow(fmtEntry(amountView))}${sheet.target === 'amount' ? caret : ''} <span class="amount-cur">${CUR_SYMBOL[sheet.currency]}</span>`;
+  $('tips-display').innerHTML = sheet.tipsStr
+    ? narrow(fmtEntry(sheet.tipsStr)) + (sheet.target === 'tips' ? caret : '')
+    : (sheet.target === 'tips' ? caret : '+');
   $('amount-box').classList.toggle('on', sheet.target === 'amount');
   $('tips-box').classList.toggle('on', sheet.target === 'tips');
 
