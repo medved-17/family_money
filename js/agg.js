@@ -17,9 +17,11 @@ export function inPeriod(period, extraFilter = {}) {
 }
 
 export function summarize(expenses, base) {
-  let total = 0, tips = 0;
+  let total = 0, tips = 0, count = 0;
   const byCat = new Map(), byAuthor = { sonya: 0, nikita: 0 }, byCur = new Map();
   for (const e of expenses) {
+    if (e.kind === 'exchange') continue;   // обмен валюты — не трата
+    count++;
     const v = toBase(e, base);
     const t = tipsToBase(e, base);
     total += v; tips += t;
@@ -33,7 +35,7 @@ export function summarize(expenses, base) {
   const cats = [...byCat.entries()]
     .map(([id, value]) => ({ cat: categoryById(id), value }))
     .sort((a, b) => b.value - a.value);
-  return { total, tips, cats, byAuthor, byCur, count: expenses.length };
+  return { total, tips, cats, byAuthor, byCur, count };
 }
 
 // Динамика: по дням для месяца/недели, по месяцам для года/всего
@@ -44,6 +46,7 @@ export function series(expenses, period, base) {
     const days = Math.min(Math.round((Math.min(to, new Date(2100, 0)) - from) / 86400000), 31);
     const sums = {};
     for (const e of expenses) {
+      if (e.kind === 'exchange') continue;
       const d = new Date(e.spentAt);
       const key = `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`;
       sums[key] = (sums[key] || 0) + toBase(e, base);
@@ -57,6 +60,7 @@ export function series(expenses, period, base) {
     const sums = {};
     let minY = 9999, maxY = 0;
     for (const e of expenses) {
+      if (e.kind === 'exchange') continue;
       const d = new Date(e.spentAt);
       const key = `${d.getFullYear()}-${d.getMonth()}`;
       sums[key] = (sums[key] || 0) + toBase(e, base);

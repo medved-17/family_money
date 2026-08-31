@@ -98,15 +98,17 @@
       <div class="hero-carousel" id="home-card-carousel">
         <section class="total-card" id="home-total-card">
           <span class="total-label">Потрачено вместе</span>
-          <div class="total-amount" id="home-total">0 ₽</div>
+          <button class="total-amount total-amount-btn" id="home-total" aria-label="Сменить валюту отображения">0 ₽</button>
           <div class="total-tips" id="home-tips-line"></div>
           <div class="authors-split" id="home-authors"></div>
         </section>
         <section class="total-card remaining-card" id="home-remaining-card">
           <button class="card-edit" id="home-balance-edit" aria-label="Изменить исходную сумму"></button>
+          <button class="card-info" id="home-remaining-info" aria-label="Что это за сумма">ⓘ</button>
           <span class="total-label">Осталось всего</span>
-          <div class="total-amount" id="home-remaining-total">0 $</div>
+          <div class="total-amount" id="home-remaining-total">0 ₽</div>
           <div class="total-tips" id="home-remaining-line"></div>
+          <div class="remaining-hint" id="home-remaining-hint">Итог — сумма всех валют, пересчитанная в рубли по вашему курсу. Доллары, лиры и евро показаны отдельно, без пересчёта.</div>
           <div class="remaining-pills" id="home-remaining-pills"></div>
         </section>
       </div>
@@ -209,14 +211,20 @@
   </header>
 
   <div class="sheet-scroll">
-    <!-- Сумма и чаевые -->
+    <!-- Тип операции: трата / обмен валюты -->
+    <div class="sheet-kind" id="sheet-kind">
+      <button data-kind="expense" class="on">Трата</button>
+      <button data-kind="exchange">Обмен валюты</button>
+    </div>
+
+    <!-- Сумма и чаевые (в режиме обмена: отдал / получил) -->
     <div class="amount-row">
       <button class="amount-box on" id="amount-box" data-target="amount">
-        <span class="amount-box-label">Сумма</span>
+        <span class="amount-box-label" id="amount-box-label">Сумма</span>
         <span class="amount-value" id="amount-display">0</span>
       </button>
       <button class="amount-box amount-box-tips" id="tips-box" data-target="tips">
-        <span class="amount-box-label">Чаевые</span>
+        <span class="amount-box-label" id="tips-box-label">Чаевые</span>
         <span class="amount-value amount-value-tips" id="tips-display">+</span>
       </button>
     </div>

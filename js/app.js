@@ -6,6 +6,7 @@ import { initSync, syncState } from './sync.js';
 import {
   ui, shiftMonth, renderHome, renderHistory, renderStats,
   sheet, openAddSheet, closeAddSheet, renderSheet, keypadPress, saveSheet, deleteSheetExpense,
+  setSheetKind, cycleHomeCurrency,
   statsExpensesAndPeriod, historyExpenses,
 } from './ui.js';
 import { renderSettings } from './settings.js';
@@ -288,6 +289,16 @@ function bindEvents() {
     e.stopPropagation();
     openBalanceSheet();
   });
+  // тап по сумме «Потрачено» — плавно переключает валюту отображения
+  $('home-total').addEventListener('click', (e) => {
+    e.stopPropagation();
+    cycleHomeCurrency();
+  });
+  // значок ⓘ на карточке остатка — плавно показывает пояснение
+  $('home-remaining-info').addEventListener('click', (e) => {
+    e.stopPropagation();
+    $('home-remaining-hint').classList.toggle('show');
+  });
   $('add-cancel').addEventListener('click', closeAddSheet);
   // свайп вниз закрывает шторки
   makeDraggable($('add-sheet'), closeAddSheet);
@@ -320,10 +331,23 @@ function bindEvents() {
   $('amount-box').addEventListener('click', () => { sheet.target = 'amount'; renderSheet(); });
   $('tips-box').addEventListener('click', () => { sheet.target = 'tips'; renderSheet(); });
 
+  // переключатель типа операции: трата / обмен
+  $('sheet-kind').addEventListener('click', (e) => {
+    const b = e.target.closest('button');
+    if (b) setSheetKind(b.dataset.kind);
+  });
+
   $('currency-row').addEventListener('click', async (e) => {
     const c = e.target.closest('.chip');
     if (!c) return;
-    sheet.currency = c.dataset.cur;
+    const cur = c.dataset.cur;
+    if (sheet.kind === 'exchange') {
+      // валюта относится к активному боксу: «отдал» или «получил»
+      if (sheet.target === 'tips') sheet.toCur = cur; else sheet.fromCur = cur;
+      renderSheet();
+      return;
+    }
+    sheet.currency = cur;
     sheet.manualRate = null;
     await saveSettings({ lastCurrency: sheet.currency });
     renderSheet();
