@@ -1,6 +1,6 @@
 // Точка входа: онбординг, навигация, привязка событий
 
-import { initStore, state, subscribe, setPassword, checkPassword, setUnlocked, setProfile, addCategory, saveSettings, saveBalances } from './store.js';
+import { initStore, state, subscribe, setPassword, checkPassword, setUnlocked, setProfile, addCategory, saveSettings, saveBalances, deleteExpense } from './store.js';
 import { refreshRates } from './rates.js';
 import { initSync, syncState } from './sync.js';
 import {
@@ -62,6 +62,60 @@ function updateHeroNav() {
   const atEnd = c.scrollLeft > c.clientWidth * 0.5;
   wrap.classList.toggle('at-start', !atEnd);
   wrap.classList.toggle('at-end', atEnd);
+}
+
+function bindHistorySwipeDelete() {
+  const list = $('history-list');
+  let swipe = null;
+
+  list.addEventListener('pointerdown', (e) => {
+    const row = e.target.closest('.tx-row');
+    if (!row || !list.contains(row)) return;
+    swipe = {
+      row,
+      pointerId: e.pointerId,
+      id: row.dataset.tx,
+      startX: e.clientX,
+      startY: e.clientY,
+      dx: 0,
+      dragging: false,
+    };
+    try { row.setPointerCapture(e.pointerId); } catch { /* не критично */ }
+    row.classList.add('swiping');
+  });
+
+  list.addEventListener('pointermove', (e) => {
+    if (!swipe) return;
+    const dx = e.clientX - swipe.startX;
+    const dy = e.clientY - swipe.startY;
+    if (!swipe.dragging && Math.abs(dy) > Math.abs(dx)) return;
+    if (dx >= 0) return;
+    swipe.dragging = true;
+    swipe.dx = Math.max(dx, -104);
+    swipe.row.style.transform = `translateX(${swipe.dx}px)`;
+  }, { passive: true });
+
+  async function finishSwipe() {
+    if (!swipe) return;
+    const { row, pointerId, id, dx, dragging } = swipe;
+    swipe = null;
+    try { row.releasePointerCapture(pointerId); } catch { /* не критично */ }
+    row.classList.remove('swiping');
+    if (!dragging) {
+      row.style.transform = '';
+      return;
+    }
+    row.dataset.swipedUntil = String(Date.now() + 500);
+    if (dx < -72 && confirm('Удалить эту покупку? Она исчезнет на обоих телефонах.')) {
+      await deleteExpense(id);
+      toast('Покупка удалена');
+    } else {
+      row.style.transform = '';
+    }
+  }
+
+  list.addEventListener('pointerup', finishSwipe);
+  list.addEventListener('pointercancel', finishSwipe);
 }
 
 // ─── Онбординг ───
@@ -190,10 +244,15 @@ function bindEvents() {
   document.addEventListener('click', (e) => {
     const row = e.target.closest('[data-tx]');
     if (row) {
+      if (Number(row.dataset.swipedUntil || 0) > Date.now()) {
+        e.preventDefault();
+        return;
+      }
       const exp = state.expenses.find(x => x.id === row.dataset.tx);
       if (exp) openAddSheet(exp);
     }
   });
+  bindHistorySwipeDelete();
 
   // ─── лист добавления ───
   $('fab-add').addEventListener('click', () => openAddSheet());

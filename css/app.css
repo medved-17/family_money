@@ -319,13 +319,33 @@ button svg, .set-row-ico svg { width: 20px; height: 20px; }
 
 /* ═══ Список операций ═══ */
 .tx-list { display: flex; flex-direction: column; }
+.tx-swipe {
+  position: relative;
+  overflow: hidden;
+  background: var(--danger);
+}
+.tx-swipe:first-child { border-radius: var(--r-s) var(--r-s) 0 0; }
+.tx-swipe:last-child { border-radius: 0 0 var(--r-s) var(--r-s); }
+.tx-swipe:only-child { border-radius: var(--r-s); }
+.tx-delete-bg {
+  position: absolute;
+  inset: 0 18px 0 auto;
+  display: flex;
+  align-items: center;
+  color: #fff;
+  font-size: 13px;
+  font-weight: 800;
+}
 .tx-row {
   display: grid; grid-template-columns: 42px 1fr auto; gap: 12px; align-items: center;
   padding: 10px 0; text-align: left; width: 100%;
   border-bottom: 1px solid var(--hairline);
-  transition: opacity .12s;
+  background: var(--card);
+  touch-action: pan-y;
+  transition: opacity .12s, transform .2s cubic-bezier(.2, .8, .3, 1);
 }
-.tx-row:last-child { border-bottom: 0; }
+.tx-swipe:last-child .tx-row { border-bottom: 0; }
+.tx-row.swiping { transition: none; }
 .tx-row:active { opacity: .55; }
 .tx-emoji {
   width: 42px; height: 42px; border-radius: 14px; display: grid; place-items: center;

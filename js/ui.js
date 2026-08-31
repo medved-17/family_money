@@ -171,19 +171,22 @@ function txRowHTML(e) {
   const tips = e.tips > 0
     ? `<div class="tx-tips">🤝 +${nNum(e.tips)} ${CUR_SYMBOL[e.currency]}</div>` : '';
   return `
-  <button class="tx-row" data-tx="${e.id}">
-    <span class="tx-emoji" style="background:${cat.color}22">${cat.emoji}
-      <span class="tx-author-dot" style="background:${authorDotColor(e.author)}"></span>
-    </span>
-    <span class="tx-main">
-      <div class="tx-title">${escapeHtml(e.note) || escapeHtml(cat.name)}</div>
-      <div class="tx-sub">${e.note ? escapeHtml(cat.name) + ' · ' : ''}${AUTHORS[e.author]?.name || ''} · ${fmtDay(d)} ${fmtTime(d)}</div>
-    </span>
-    <span class="tx-right">
-      <div class="tx-amount">−${nMoney(e.amount, e.currency)}</div>
-      ${tips}${inBase}
-    </span>
-  </button>`;
+  <div class="tx-swipe">
+    <span class="tx-delete-bg">Удалить</span>
+    <button class="tx-row" data-tx="${e.id}">
+      <span class="tx-emoji" style="background:${cat.color}22">${cat.emoji}
+        <span class="tx-author-dot" style="background:${authorDotColor(e.author)}"></span>
+      </span>
+      <span class="tx-main">
+        <div class="tx-title">${escapeHtml(e.note) || escapeHtml(cat.name)}</div>
+        <div class="tx-sub">${e.note ? escapeHtml(cat.name) + ' · ' : ''}${AUTHORS[e.author]?.name || ''} · ${fmtDay(d)} ${fmtTime(d)}</div>
+      </span>
+      <span class="tx-right">
+        <div class="tx-amount">−${nMoney(e.amount, e.currency)}</div>
+        ${tips}${inBase}
+      </span>
+    </button>
+  </div>`;
 }
 
 // ─────────────── ИСТОРИЯ ───────────────
