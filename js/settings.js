@@ -1,7 +1,7 @@
 // Экран настроек
 
 import {
-  state, saveSettings, setProfile, setPassword, checkPassword,
+  state, saveFamilySettings, setProfile, setPassword, checkPassword,
   visibleExpenses, addCategory, updateCategory, backupJSON, restoreBackup, saveBalances,
 } from './store.js';
 import { db } from './db.js';
@@ -210,7 +210,7 @@ function bindSettings() {
     if (!next || next === state.settings.baseCurrency) return;
     // базовую валюту нельзя держать выключенной
     const hiddenCurrencies = (state.settings.hiddenCurrencies || []).filter(c => c !== next);
-    await saveSettings({ baseCurrency: next, hiddenCurrencies });
+    await saveFamilySettings({ baseCurrency: next, hiddenCurrencies });
     renderSettings();
     toast(`Базовая валюта: ${next}`);
   };
@@ -236,7 +236,7 @@ function bindSettings() {
     const cur = b.dataset.curHide;
     const list = new Set(state.settings.hiddenCurrencies || []);
     list.has(cur) ? list.delete(cur) : list.add(cur);
-    await saveSettings({ hiddenCurrencies: [...list] });
+    await saveFamilySettings({ hiddenCurrencies: [...list] });
     renderSettings();
   });
 
@@ -372,7 +372,7 @@ async function saveRatePeriods(cur, list) {
   const others = (Array.isArray(all[cur]) ? all[cur] : []).filter(e => e.base !== bse);
   const customRates = { ...all, [cur]: [...others, ...list] };
   if (!customRates[cur].length) delete customRates[cur];
-  await saveSettings({ customRates });
+  await saveFamilySettings({ customRates });
 }
 
 function openRatesEditor(cur) {

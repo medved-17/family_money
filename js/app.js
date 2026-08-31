@@ -64,6 +64,25 @@ function updateHeroNav() {
   wrap.classList.toggle('at-end', atEnd);
 }
 
+function parseMoneyInput(value) {
+  const clean = String(value || '').replace(',', '.').replace(/\s/g, '');
+  if (!clean) return 0;
+  return parseFloat(clean);
+}
+
+function fillBalanceSheet() {
+  const balances = state.settings.balances || {};
+  for (const cur of ['USD', 'TRY', 'RUB', 'EUR']) {
+    $(`balance-${cur}`).value = balances[cur] ? String(balances[cur]).replace('.', ',') : '';
+  }
+}
+
+function openBalanceSheet() {
+  fillBalanceSheet();
+  openSheet($('balance-sheet'));
+  setTimeout(() => $('balance-USD').focus(), 180);
+}
+
 function bindHistorySwipeDelete() {
   const list = $('history-list');
   let swipe = null;
@@ -265,33 +284,34 @@ function bindEvents() {
     c.scrollTo({ left: c.children[1].offsetLeft, behavior: 'smooth' });
   });
   $('home-card-carousel').addEventListener('scroll', () => requestAnimationFrame(updateHeroNav), { passive: true });
-  $('home-balance-edit').addEventListener('click', async (e) => {
+  $('home-balance-edit').addEventListener('click', (e) => {
     e.stopPropagation();
-    const cur = await showPicker({
-      title: 'Исходная сумма',
-      value: 'USD',
-      options: ['USD', 'TRY', 'RUB', 'EUR'].map(c => ({ value: c, label: `${c} ${CUR_SYMBOL[c]}` })),
-    });
-    if (!cur) return;
-    const balances = state.settings.balances || {};
-    const raw = prompt(`Сколько всего было изначально в ${cur}?`, String(balances[cur] || '').replace('.', ','));
-    if (raw === null) return;
-    const value = parseFloat(raw.replace(',', '.').replace(/\s/g, ''));
-    if (!isFinite(value) || value < 0) { toast('Введите сумму от 0'); return; }
-    await saveBalances({ [cur]: value });
-    renderHome();
-    toast(`Исходная сумма ${cur} сохранена`);
+    openBalanceSheet();
   });
   $('add-cancel').addEventListener('click', closeAddSheet);
   // свайп вниз закрывает шторки
   makeDraggable($('add-sheet'), closeAddSheet);
   makeDraggable($('export-sheet'), () => closeSheet($('export-sheet')));
   makeDraggable($('rates-sheet'), () => closeSheet($('rates-sheet')));
+  makeDraggable($('balance-sheet'), () => closeSheet($('balance-sheet')));
   $('sheet-backdrop').addEventListener('click', () => {
     sheet.open = false;
     closeAllSheets();
   });
   $('add-delete').addEventListener('click', deleteSheetExpense);
+  $('balance-cancel').addEventListener('click', () => closeSheet($('balance-sheet')));
+  $('balance-save').addEventListener('click', async () => {
+    const balances = {};
+    for (const cur of ['USD', 'TRY', 'RUB', 'EUR']) {
+      const value = parseMoneyInput($(`balance-${cur}`).value);
+      if (!isFinite(value) || value < 0) { toast('Введите суммы от 0'); return; }
+      balances[cur] = value;
+    }
+    await saveBalances(balances);
+    closeSheet($('balance-sheet'));
+    renderHome();
+    toast('Исходные суммы сохранены');
+  });
 
   $('keypad').addEventListener('click', (e) => {
     const b = e.target.closest('button');

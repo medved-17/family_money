@@ -96,6 +96,7 @@ function connect(app, fs, uid) {
   const expCol = fs.collection(dbi, 'spaces', uid, 'expenses');
   const catCol = fs.collection(dbi, 'spaces', uid, 'categories');
   const walletRef = fs.doc(dbi, 'spaces', uid, 'wallet', 'balances');
+  const settingsRef = fs.doc(dbi, 'spaces', uid, 'settings', 'family');
   fs.onSnapshot(expCol, snap => {
     const remote = snap.docs.map(d => d.data());
     mergeRemote(remote, []).then(() => {
@@ -114,6 +115,13 @@ function connect(app, fs, uid) {
       notify('sync');
     });
   }, err => { syncState.error = 'Ошибка чтения кошелька'; console.warn(err); notify('sync'); });
+  fs.onSnapshot(settingsRef, snap => {
+    if (!snap.exists()) return;
+    mergeRemote([], [], null, snap.data()).then(() => {
+      syncState.lastSyncAt = new Date();
+      notify('sync');
+    });
+  }, err => { syncState.error = 'Ошибка чтения настроек'; console.warn(err); notify('sync'); });
 
   schedulePush();
 }
@@ -132,7 +140,8 @@ async function pushAll() {
     const dirtyExp = state.expenses.filter(e => (e.updatedAt || '') > lastPush);
     const dirtyCat = state.categories.filter(c => (c.updatedAt || '') > lastPush);
     const dirtyWallet = (state.settings.balancesUpdatedAt || '') > lastPush;
-    if (!dirtyExp.length && !dirtyCat.length && !dirtyWallet) return;
+    const dirtyFamilySettings = (state.settings.familySettingsUpdatedAt || '') > lastPush;
+    if (!dirtyExp.length && !dirtyCat.length && !dirtyWallet && !dirtyFamilySettings) return;
 
     const batchLimit = 400;
     for (let i = 0; i < dirtyExp.length; i += batchLimit) {
@@ -153,6 +162,14 @@ async function pushAll() {
       await fs.setDoc(fs.doc(dbi, 'spaces', uid, 'wallet', 'balances'), sanitize({
         balances: state.settings.balances || {},
         updatedAt: state.settings.balancesUpdatedAt,
+      }));
+    }
+    if (dirtyFamilySettings) {
+      await fs.setDoc(fs.doc(dbi, 'spaces', uid, 'settings', 'family'), sanitize({
+        baseCurrency: state.settings.baseCurrency,
+        hiddenCurrencies: state.settings.hiddenCurrencies || [],
+        customRates: state.settings.customRates || {},
+        updatedAt: state.settings.familySettingsUpdatedAt,
       }));
     }
     localStorage.setItem('fm-last-push', new Date().toISOString());

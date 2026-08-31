@@ -259,6 +259,36 @@
   <button class="btn btn-primary btn-save" id="add-save">Сохранить</button>
 </div>
 
+<!-- ══════════ ЛИСТ ИСХОДНЫХ СУММ ══════════ -->
+<div id="balance-sheet" class="sheet sheet-auto hidden" role="dialog" aria-label="Исходные суммы">
+  <div class="sheet-grip"></div>
+  <header class="sheet-head">
+    <button class="sheet-cancel" id="balance-cancel">Закрыть</button>
+    <h2>Исходные суммы</h2><span></span>
+  </header>
+  <div class="balance-body">
+    <div class="balance-grid">
+      <label class="balance-input">
+        <span>$ USD</span>
+        <input id="balance-USD" inputmode="decimal" autocomplete="off">
+      </label>
+      <label class="balance-input">
+        <span>₺ TRY</span>
+        <input id="balance-TRY" inputmode="decimal" autocomplete="off">
+      </label>
+      <label class="balance-input">
+        <span>₽ RUB</span>
+        <input id="balance-RUB" inputmode="decimal" autocomplete="off">
+      </label>
+      <label class="balance-input">
+        <span>€ EUR</span>
+        <input id="balance-EUR" inputmode="decimal" autocomplete="off">
+      </label>
+    </div>
+    <button class="btn btn-primary btn-big" id="balance-save">Сохранить</button>
+  </div>
+</div>
+
 <!-- ══════════ ЛИСТ ЭКСПОРТА ══════════ -->
 <div id="export-sheet" class="sheet sheet-auto hidden" role="dialog" aria-label="Экспорт">
   <div class="sheet-grip"></div>

@@ -38,6 +38,7 @@ export const state = {
     hiddenCurrencies: ['EUR'],
     balances: { USD: 0, TRY: 0, RUB: 0, EUR: 0 },
     balancesUpdatedAt: null,
+    familySettingsUpdatedAt: null,
   },
   profile: null,       // 'sonya' | 'nikita' — локально для устройства (AUTH-04)
   unlocked: false,
@@ -88,6 +89,14 @@ export async function saveSettings(patch) {
   setCustomRates(state.settings.customRates);
   await db.setMeta('settings', { ...state.settings });
   notify('settings');
+}
+
+export async function saveFamilySettings(patch, updatedAt = new Date().toISOString()) {
+  Object.assign(state.settings, patch, { familySettingsUpdatedAt: updatedAt });
+  setCustomRates(state.settings.customRates);
+  await db.setMeta('settings', { ...state.settings });
+  notify('settings');
+  queueSync();
 }
 
 export async function saveBalances(balances, updatedAt = new Date().toISOString()) {
@@ -205,7 +214,7 @@ export function categoriesByUsage() {
 }
 
 // ─── Слияние при синхронизации: LWW по updatedAt (SYNC-06) ───
-export async function mergeRemote(remoteExpenses, remoteCategories, remoteWallet = null) {
+export async function mergeRemote(remoteExpenses, remoteCategories, remoteWallet = null, remoteFamilySettings = null) {
   let changed = false;
   const byId = new Map(state.expenses.map(e => [e.id, e]));
   const toWrite = [];
@@ -236,7 +245,20 @@ export async function mergeRemote(remoteExpenses, remoteCategories, remoteWallet
     changed = true;
   }
 
-  if (changed) notify('expenses');
+  if (remoteFamilySettings && (remoteFamilySettings.updatedAt || '') > (state.settings.familySettingsUpdatedAt || '')) {
+    const { baseCurrency, hiddenCurrencies, customRates, updatedAt } = remoteFamilySettings;
+    if (baseCurrency) state.settings.baseCurrency = baseCurrency;
+    if (Array.isArray(hiddenCurrencies)) state.settings.hiddenCurrencies = hiddenCurrencies;
+    if (customRates) {
+      state.settings.customRates = customRates;
+      setCustomRates(customRates);
+    }
+    state.settings.familySettingsUpdatedAt = updatedAt;
+    await db.setMeta('settings', { ...state.settings });
+    changed = true;
+  }
+
+  if (changed) notify('all');
   return changed;
 }
 
@@ -251,7 +273,12 @@ export function backupJSON() {
     app: 'family-money',
     version: 1,
     exportedAt: new Date().toISOString(),
-    settings: { baseCurrency: state.settings.baseCurrency, balances: state.settings.balances },
+    settings: {
+      baseCurrency: state.settings.baseCurrency,
+      customRates: state.settings.customRates,
+      hiddenCurrencies: state.settings.hiddenCurrencies,
+      balances: state.settings.balances,
+    },
     categories: state.categories,
     expenses: state.expenses,
   }, null, 2);
