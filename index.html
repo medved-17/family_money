@@ -233,8 +233,11 @@
     <div class="cat-scroller" id="cat-picker"></div>
 
     <!-- Комментарий и дата -->
+    <label class="note-field">
+      <span class="note-label">Комментарий</span>
+      <textarea id="add-note" class="note-input" placeholder="Например: кофе у дома" maxlength="160" rows="2"></textarea>
+    </label>
     <div class="meta-row">
-      <input type="text" id="add-note" class="note-input" placeholder="Комментарий…" maxlength="120">
       <label class="date-chip">
         <span id="add-date-text">Сейчас</span>
         <input type="datetime-local" id="add-date">
