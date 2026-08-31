@@ -11,9 +11,10 @@ function base() { return state.settings.baseCurrency; }
 const stamp = () => new Date().toISOString().slice(0, 10);
 
 // ─── Excel (11.1): операции построчно + лист сводки ───
-export function exportXlsx(expenses, period) {
+export function exportXlsx(allOps, period) {
   const b = base();
-  expenses = expenses.filter(e => e.kind !== 'exchange');   // обмены — не траты, в таблицу не идут
+  const exchanges = allOps.filter(e => e.kind === 'exchange');
+  const expenses = allOps.filter(e => e.kind !== 'exchange');
   const sorted = [...expenses].sort((a, c) => a.spentAt.localeCompare(c.spentAt));
 
   const rows = [
@@ -62,18 +63,47 @@ export function exportXlsx(expenses, period) {
       [`${cur}`, { v: round2(v.orig), style: S.NUM }, `в ${b}:`, { v: round2(v.base), style: S.NUM }]),
   ];
 
-  const blob = buildXlsx([
+  const sheets = [
     { name: 'Операции', rows, colWidths: [11, 7, 9, 18, 24, 10, 9, 10, 8, 10, 12] },
     { name: 'Сводка', rows: summaryRows, colWidths: [26, 14, 8, 14] },
-  ]);
+  ];
+
+  // Отдельный лист обменов валют (со своим курсом)
+  if (exchanges.length) {
+    const exRows = [
+      [{ v: `Обмены валют, ${periodTitle(period)}`, style: S.BOLD }],
+      [],
+      ['Дата', 'Время', 'Автор', 'Отдал', 'Валюта', 'Получил', 'Валюта', 'Курс', 'Комментарий']
+        .map(v => ({ v, style: S.HEAD })),
+      ...[...exchanges].sort((a, c) => a.spentAt.localeCompare(c.spentAt)).map(e => {
+        const d = new Date(e.spentAt);
+        const rate = e.fromAmount ? e.toAmount / e.fromAmount : 0;
+        return [
+          d.toLocaleDateString('ru-RU'),
+          d.toTimeString().slice(0, 5),
+          AUTHORS[e.author]?.name || e.author || '',
+          { v: e.fromAmount, style: S.NUM },
+          e.fromCur,
+          { v: e.toAmount, style: S.NUM },
+          e.toCur,
+          { v: round2(rate * 10000) / 10000, style: S.NUM },
+          e.note || '',
+        ];
+      }),
+    ];
+    sheets.push({ name: 'Обмены', rows: exRows, colWidths: [11, 7, 9, 11, 8, 11, 8, 10, 24] });
+  }
+
+  const blob = buildXlsx(sheets);
   downloadBlob(blob, `nashi-dengi-${stamp()}.xlsx`);
   toast('Excel сохранён');
 }
 
 // ─── PDF (11.2): компактный отчёт ───
-export function exportPdf(expenses, period) {
+export function exportPdf(allOps, period) {
   const b = base();
-  expenses = expenses.filter(e => e.kind !== 'exchange');   // обмены — не траты, в таблицу не идут
+  const exchanges = allOps.filter(e => e.kind === 'exchange');
+  const expenses = allOps.filter(e => e.kind !== 'exchange');
   const s = summarize(expenses, b);
   const p = new ReportPainter();
   const money = v => `${fmtNum(round2(v))} ${CUR_SYMBOL[b]}`;
@@ -132,6 +162,17 @@ export function exportPdf(expenses, period) {
     }
     if (expenses.length > 400) {
       p.row([`… и ещё ${expenses.length - 400} операций (полный список — в Excel)`, '', '', '', ''], [1, 0, 0, 0, 0], { size: 20, color: '#85806f' });
+    }
+  }
+
+  if (exchanges.length) {
+    p.sectionHead('Обмены валют');
+    for (const e of [...exchanges].sort((a, c) => c.spentAt.localeCompare(a.spentAt))) {
+      const d = new Date(e.spentAt);
+      const rate = e.fromAmount ? e.toAmount / e.fromAmount : 0;
+      const dt = d.toLocaleDateString('ru-RU', { day: '2-digit', month: '2-digit', year: '2-digit' });
+      p.kv(`${dt} · ${AUTHORS[e.author]?.name || ''}`,
+        `${fmtNum(e.fromAmount)} ${CUR_SYMBOL[e.fromCur]} → ${fmtNum(e.toAmount)} ${CUR_SYMBOL[e.toCur]}  ·  курс ${fmtNum(rate, 4)}`);
     }
   }
 

@@ -98,6 +98,15 @@ export async function initStore() {
   setCustomRates(state.settings.customRates);
   state.profile = profile || null;
   state.unlocked = !!unlocked;
+
+  // Единоразовый перезаход под общий пароль: старые устройства должны ввести его.
+  const authGen = await db.getMeta('authGen');
+  if (authGen !== 'shared-v1') {
+    state.unlocked = false;
+    await db.setMeta('unlocked', false);
+    await db.setMeta('authGen', 'shared-v1');
+  }
+
   state.ready = true;
 }
 
@@ -130,16 +139,13 @@ export async function saveWallet(patch, updatedAt = new Date().toISOString()) {
   queueSync();
 }
 
-// ─── Аутентификация (локальный режим): хэш пароля, DATA-04 ───
-export async function setPassword(password) {
-  const salt = uuid();
-  const hash = await sha256(salt + password);
-  await saveSettings({ passwordHash: hash, passwordSalt: salt });
-}
-export async function checkPassword(password) {
-  const { passwordHash, passwordSalt } = state.settings;
-  if (!passwordHash) return false;
-  return (await sha256(passwordSalt + password)) === passwordHash;
+// ─── Аутентификация: единый общий пароль (только Соня и Никита) ───
+// Пароль не хранится в коде — только его солёный SHA-256, брутфорс сильной
+// парольной фразы по хэшу непрактичен даже в публичном репозитории.
+const SHARED_SALT = 'fm-shared-v1';
+const SHARED_HASH = '9de7f5ce4ec0fed24908166d1465873ee3488949f28ecba14ccb4e56175e480a';
+export async function checkSharedPassword(password) {
+  return (await sha256(SHARED_SALT + password)) === SHARED_HASH;
 }
 export async function setUnlocked(v) {
   state.unlocked = v;

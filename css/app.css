@@ -590,14 +590,14 @@ button svg, .set-row-ico svg { width: 20px; height: 20px; }
    чтобы клавиатура и кнопка «Сохранить» всегда оставались на экране */
 .sheet-scroll {
   padding: 4px 18px 8px; flex: 0 1 auto; min-height: 0;
-  overflow-y: auto; overscroll-behavior: contain;
+  overflow-y: auto; overflow-x: hidden; overscroll-behavior: contain;
   scrollbar-width: none; -webkit-overflow-scrolling: touch;
 }
 .sheet-scroll::-webkit-scrollbar { display: none; }
 .no-scroll { overflow: hidden; }
 
 /* Сумма + чаевые */
-.amount-row { display: flex; gap: 10px; margin-bottom: 12px; }
+.amount-row { display: flex; gap: 10px; margin-bottom: 8px; }
 .amount-box {
   background: var(--card); border-radius: 18px; padding: 11px 16px;
   flex: 1.7; text-align: left; border: 1.5px solid var(--hairline);
@@ -627,7 +627,7 @@ button svg, .set-row-ico svg { width: 20px; height: 20px; }
 }
 
 /* Чипы валют */
-.chip-row { display: flex; gap: 8px; margin-bottom: 14px; }
+.chip-row { display: flex; gap: 8px; margin-bottom: 10px; }
 .chip {
   flex: 1; padding: 9px 0; border-radius: 99px; background: var(--card);
   font-size: 13px; font-weight: 700; color: var(--ink-2);
@@ -639,7 +639,7 @@ button svg, .set-row-ico svg { width: 20px; height: 20px; }
 .cat-scroller {
   display: grid; grid-auto-flow: column; grid-template-rows: repeat(2, auto);
   grid-auto-columns: 78px; gap: 8px; overflow-x: auto; overflow-y: hidden;
-  padding: 2px 2px 6px; margin-bottom: 12px;
+  padding: 2px 2px 6px; margin-bottom: 8px;
   scrollbar-width: none; -webkit-overflow-scrolling: touch;
   overscroll-behavior-x: contain; touch-action: pan-x;
 }
@@ -845,25 +845,34 @@ body, .card, .set-card, .day-card, .stat-tile, .tabbar, .sheet,
 .rate-add-btn { padding: 10px 14px; font-size: 13.5px; box-shadow: none; flex: none; }
 .rates-hint { font-size: 12px; color: var(--ink-2); padding: 12px 2px 4px; line-height: 1.5; }
 
-/* ═══ Компактный лист на невысоких экранах (iPhone SE и т.п.) ═══ */
-@media (max-height: 800px) {
+/* ═══ Умеренная компоновка для большинства телефонов (iPhone 12–16 и т.п.):
+   слегка ужимаем клавиатуру и отступы, категории остаются в 2 ряда, но
+   всё влезает без прокрутки ═══ */
+@media (max-height: 900px) {
+  .keypad button { height: 48px; }
+  .keypad { padding: 4px 26px 2px; }
+  .btn-save { padding: 14px; }
+  .sheet-scroll { padding-bottom: 4px; }
+  .note-input { height: 40px; }
+}
+
+/* ═══ Плотная компоновка на невысоких экранах (iPhone SE/mini) ═══ */
+@media (max-height: 780px) {
   .keypad button { height: 46px; font-size: 21px; }
   .amount-value { font-size: 26px; }
   .amount-value-tips { font-size: 19px; }
   .cat-scroller { grid-template-rows: repeat(1, auto); }
   .cat-cell { padding: 8px 2px 6px; }
-  .btn-save { padding: 13px; }
-  .sheet-scroll { padding-bottom: 4px; }
 }
 
 /* ═══ Обмен валюты + переключение валют на главной ═══ */
 /* Переключатель тип операции (трата / обмен) — как сегмент-контрол */
 .sheet-kind {
   display: flex; background: var(--card-2); border-radius: 99px; padding: 3px;
-  margin-bottom: 12px; border: 1px solid var(--hairline);
+  margin-bottom: 8px; border: 1px solid var(--hairline);
 }
 .sheet-kind button {
-  flex: 1; padding: 8px 0; border-radius: 99px; font-size: 13px; font-weight: 600;
+  flex: 1; padding: 7px 0; border-radius: 99px; font-size: 13px; font-weight: 600;
   color: var(--ink-2); transition: color .15s;
 }
 .sheet-kind button.on { background: var(--card); color: var(--ink); box-shadow: 0 1px 6px rgba(31,30,29,.10); }
