@@ -45,7 +45,7 @@ export function makeDraggable(el, onClose) {
   let tracking = false, dragging = false;
   const backdrop = () => $('sheet-backdrop');
   // из вертикально скроллящихся зон и полей ввода шторку не тянем
-  const skip = t => t.closest && t.closest('.pick-list, .rates-body, input, textarea, select');
+  const skip = t => t.closest && t.closest('.pick-list, .rates-body, .sheet-scroll, input, textarea, select');
 
   el.addEventListener('touchstart', (e) => {
     if (el.classList.contains('hidden') || skip(e.target)) return;
