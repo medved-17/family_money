@@ -96,13 +96,17 @@ export function escapeHtml(s) {
     ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 }
 
-let toastTimer;
+let toastTimer, toastOutTimer;
 export function toast(msg) {
   const el = document.getElementById('toast');
   el.textContent = msg;
-  el.classList.remove('hidden');
+  el.classList.remove('hidden', 'out');
   clearTimeout(toastTimer);
-  toastTimer = setTimeout(() => el.classList.add('hidden'), 2200);
+  clearTimeout(toastOutTimer);
+  toastTimer = setTimeout(() => {
+    el.classList.add('out');
+    toastOutTimer = setTimeout(() => el.classList.add('hidden'), 220);
+  }, 2100);
 }
 
 export function downloadBlob(blob, filename) {

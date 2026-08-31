@@ -122,40 +122,24 @@
   <main id="screen-history" class="screen">
     <header class="topbar">
       <h1>История</h1>
-      <button class="icon-btn" id="history-clear-filters" title="Сбросить фильтры"></button>
     </header>
     <div class="filters" id="history-filters">
-      <label class="filter-chip">
+      <button class="filter-chip" id="f-period-chip" data-filter="period">
         <span id="f-period-text">Месяц</span>
-        <select id="f-period">
-          <option value="week">Неделя</option>
-          <option value="month" selected>Месяц</option>
-          <option value="year">Год</option>
-          <option value="all">Всё время</option>
-        </select>
-      </label>
-      <label class="filter-chip">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="chev"><path d="M6 9.5l6 6 6-6"/></svg>
+      </button>
+      <button class="filter-chip" id="f-author-chip" data-filter="author">
         <span id="f-author-text">Оба</span>
-        <select id="f-author">
-          <option value="">Оба</option>
-          <option value="sonya">Соня</option>
-          <option value="nikita">Никита</option>
-        </select>
-      </label>
-      <label class="filter-chip">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="chev"><path d="M6 9.5l6 6 6-6"/></svg>
+      </button>
+      <button class="filter-chip" id="f-cat-chip" data-filter="category">
         <span id="f-cat-text">Категории</span>
-        <select id="f-cat"><option value="">Все категории</option></select>
-      </label>
-      <label class="filter-chip">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="chev"><path d="M6 9.5l6 6 6-6"/></svg>
+      </button>
+      <button class="filter-chip" id="f-cur-chip" data-filter="currency">
         <span id="f-cur-text">Валюты</span>
-        <select id="f-cur">
-          <option value="">Все валюты</option>
-          <option value="EUR">EUR €</option>
-          <option value="USD">USD $</option>
-          <option value="TRY">TRY ₺</option>
-          <option value="RUB">RUB ₽</option>
-        </select>
-      </label>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="chev"><path d="M6 9.5l6 6 6-6"/></svg>
+      </button>
     </div>
     <div class="history-summary" id="history-summary"></div>
     <div id="history-list"></div>
@@ -271,6 +255,26 @@
     <button class="btn btn-secondary btn-big" id="export-xlsx">Скачать Excel</button>
     <button class="btn btn-secondary btn-big" id="export-pdf">Скачать PDF-отчёт</button>
   </div>
+</div>
+
+<!-- ══════════ ПИКЕР (красивый дропдаун) ══════════ -->
+<div id="pick-sheet" class="sheet sheet-auto sheet-top hidden" role="dialog" aria-label="Выбор">
+  <div class="sheet-grip"></div>
+  <header class="sheet-head">
+    <button class="sheet-cancel" id="pick-cancel">Закрыть</button>
+    <h2 id="pick-title"></h2><span></span>
+  </header>
+  <div class="pick-list" id="pick-list"></div>
+</div>
+
+<!-- ══════════ КУРСЫ ВАЛЮТЫ ПО ДАТАМ ══════════ -->
+<div id="rates-sheet" class="sheet sheet-auto sheet-top hidden" role="dialog" aria-label="Курс валюты">
+  <div class="sheet-grip"></div>
+  <header class="sheet-head">
+    <button class="sheet-cancel" id="rates-cancel">Готово</button>
+    <h2 id="rates-title">Курс</h2><span></span>
+  </header>
+  <div class="rates-body" id="rates-body"></div>
 </div>
 
 <div id="toast" class="toast hidden"></div>

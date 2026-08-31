@@ -51,19 +51,47 @@ export function rateToBase(snapshot, cur, base) {
 }
 
 // ─── Свои фиксированные курсы семьи («доллар покупали по 82») ───
-// { USD: { base: 'RUB', value: 82 }, ... } — подставляется из настроек store.js
+// С поддержкой периодов: { USD: [{ from: null, base: 'RUB', value: 82 },
+//                                 { from: '2026-08-15', base: 'RUB', value: 85 }] }
+// from: null — «с самого начала»; операция берёт курс с самой поздней датой from <= даты покупки.
 let customRates = {};
-export function setCustomRates(obj) { customRates = obj || {}; }
-export function getCustomRate(cur, base) {
-  const c = customRates[cur];
-  return c && c.base === base && c.value > 0 ? c.value : null;
+
+function normalizeCustom(obj) {
+  const out = {};
+  for (const [cur, v] of Object.entries(obj || {})) {
+    let list = Array.isArray(v) ? v : (v && v.value > 0 ? [{ from: null, base: v.base, value: v.value }] : []);
+    list = list.filter(e => e && e.value > 0 && e.base);
+    list.sort((a, b) => ((a.from || '') < (b.from || '') ? -1 : 1));
+    if (list.length) out[cur] = list;
+  }
+  return out;
 }
 
-// Итоговый курс операции: ручной у операции → свой курс семьи → рыночный снимок
+export function setCustomRates(obj) { customRates = normalizeCustom(obj); }
+
+export function getCustomRateList(cur, base) {
+  return (customRates[cur] || []).filter(e => e.base === base);
+}
+
+// Курс валюты на конкретную дату (when — ISO-строка; по умолчанию сегодня)
+export function getCustomRate(cur, base, when) {
+  const list = getCustomRateList(cur, base);
+  if (!list.length) return null;
+  const day = (when || new Date().toISOString()).slice(0, 10);
+  let best = null;
+  for (const e of list) {
+    if (!e.from || e.from <= day) {
+      if (!best || (e.from || '') >= (best.from || '')) best = e;
+    }
+  }
+  return best ? best.value : null;
+}
+
+// Итоговый курс операции: ручной у операции → свой курс семьи на дату покупки → рыночный снимок
 export function effectiveRate(expense, base) {
   if (expense.currency === base) return 1;
   if (expense.manualRate && expense.manualRate.base === base) return expense.manualRate.value;
-  const custom = getCustomRate(expense.currency, base);
+  const custom = getCustomRate(expense.currency, base, expense.spentAt);
   if (custom) return custom;
   return rateToBase(expense.rates, expense.currency, base);
 }

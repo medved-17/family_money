@@ -28,10 +28,11 @@ export const state = {
     passwordHash: null,
     passwordSalt: null,
     // свои курсы семьи: доллар покупали по 82 ₽, евро 105 ₽, лира из 47 ₺/$
+    // каждый курс может иметь периоды: { from: '2026-08-15', ... } — «с этой даты»
     customRates: {
-      USD: { base: 'RUB', value: 82 },
-      EUR: { base: 'RUB', value: 105 },
-      TRY: { base: 'RUB', value: 1.7447 },
+      USD: [{ from: null, base: 'RUB', value: 82 }],
+      EUR: [{ from: null, base: 'RUB', value: 105 }],
+      TRY: [{ from: null, base: 'RUB', value: 1.7447 }],
     },
     // выключенные валюты не показываются при добавлении траты (евро включается в настройках)
     hiddenCurrencies: ['EUR'],

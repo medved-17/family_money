@@ -128,8 +128,15 @@ button svg, .set-row-ico svg { width: 20px; height: 20px; }
   margin: 0 auto;
   padding: calc(env(safe-area-inset-top) + 10px) 18px 0;
 }
-.screen.active { display: block; animation: screenIn .22s ease; }
-@keyframes screenIn { from { opacity: 0; transform: translateY(6px); } }
+.screen.active { display: block; animation: screenIn .3s cubic-bezier(.2, .8, .3, 1); }
+@keyframes screenIn { from { opacity: 0; transform: translateY(10px); } }
+/* плавное «всплытие» блоков экрана друг за другом */
+.screen.active > * { animation: rise .38s cubic-bezier(.2, .8, .3, 1) backwards; }
+.screen.active > *:nth-child(2) { animation-delay: .04s; }
+.screen.active > *:nth-child(3) { animation-delay: .08s; }
+.screen.active > *:nth-child(4) { animation-delay: .12s; }
+.screen.active > *:nth-child(5) { animation-delay: .16s; }
+@keyframes rise { from { opacity: 0; transform: translateY(14px); } }
 .screen-pad { height: calc(var(--dock-h) + env(safe-area-inset-bottom) + 44px); }
 
 .topbar {
@@ -204,7 +211,7 @@ button svg, .set-row-ico svg { width: 20px; height: 20px; }
 }
 .total-amount .cents { font-size: 24px; opacity: .65; font-weight: 700; }
 .total-amount .cur { font-size: 26px; opacity: .8; font-weight: 600; }
-.total-amount .gsp { display: inline-block; width: .34ch; }
+.gsp { display: inline-block; width: .34ch; }
 .total-tips { font-size: 12.5px; opacity: .82; min-height: 18px; font-weight: 500; }
 .authors-split { display: flex; gap: 8px; margin-top: 16px; }
 .author-pill {
@@ -589,3 +596,88 @@ button svg, .set-row-ico svg { width: 20px; height: 20px; }
 @media (min-width: 700px) {
   .screen { padding-top: 28px; }
 }
+
+/* ═══ Плавность: закрытие шторок, переходы, тема ═══ */
+.sheet.closing { animation: sheetDown .24s cubic-bezier(.5, 0, .8, .5) forwards; }
+@keyframes sheetDown { to { transform: translateY(105%); opacity: .6; } }
+.sheet-backdrop.closing { animation: fadeOut .24s ease forwards; }
+@keyframes fadeOut { to { opacity: 0; } }
+.sheet-top { z-index: 60; }
+
+body, .card, .set-card, .day-card, .stat-tile, .tabbar, .sheet,
+.filter-chip, .period-label, .icon-btn {
+  transition-property: background-color, color, border-color;
+  transition-duration: .3s;
+}
+.chip, .cat-cell, .amount-box {
+  transition: background-color .22s, color .22s, border-color .22s, transform .15s;
+}
+.chip:active, .cat-cell:active { transform: scale(.94); }
+.filter-chip { transition: background-color .22s, color .22s, border-color .22s, transform .15s; }
+.filter-chip:active { transform: scale(.95); }
+.set-row { transition: background-color .18s; }
+.tab { transition: color .22s, transform .22s; }
+.tab.on { transform: translateY(-1px); }
+.link-btn, .period-arrow, .sheet-cancel, .sheet-danger { transition: opacity .15s, background-color .2s; }
+.link-btn:active, .sheet-cancel:active, .sheet-danger:active { opacity: .5; }
+
+.toast.out { animation: toastOut .22s ease forwards; }
+@keyframes toastOut { to { opacity: 0; transform: translate(-50%, 10px); } }
+
+.filter-chip .chev { width: 13px; height: 13px; display: inline-block; vertical-align: -2px; margin-left: 5px; opacity: .6; }
+.filter-chip { display: inline-flex; align-items: center; }
+
+.keypad button svg { width: 23px; height: 23px; margin: 0 auto; }
+
+/* ═══ Пикер (дропдаун-шторка) ═══ */
+.pick-list {
+  padding: 4px 14px 12px;
+  overflow-y: auto;
+  display: flex; flex-direction: column; gap: 2px;
+}
+.pick-row {
+  display: flex; align-items: center; gap: 12px;
+  padding: 13px 12px; border-radius: 14px; text-align: left;
+  font-size: 15.5px; font-weight: 600;
+  transition: background-color .15s, transform .12s;
+}
+.pick-row:active { background: var(--press); transform: scale(.98); }
+.pick-row.on { color: var(--accent); }
+.pick-emoji { font-size: 19px; min-width: 4px; }
+.pick-emoji:empty { display: none; }
+.pick-label { flex: 1; min-width: 0; }
+.pick-sub { display: block; font-size: 12px; color: var(--ink-2); font-weight: 500; margin-top: 1px; }
+.pick-check { color: var(--accent); width: 22px; }
+.pick-check svg { width: 20px; height: 20px; }
+
+/* ═══ Редактор курсов по датам ═══ */
+.rates-body { padding: 4px 18px 14px; overflow-y: auto; }
+.rates-empty { font-size: 13.5px; color: var(--ink-2); padding: 4px 4px 12px; }
+.rate-period {
+  display: flex; align-items: center; gap: 8px;
+  padding: 10px 0; border-bottom: 1px solid var(--hairline);
+}
+.rate-period-when { flex: 1; font-size: 13.5px; font-weight: 600; min-width: 0; }
+.rate-period-eq { font-size: 12.5px; color: var(--ink-2); white-space: nowrap; }
+.rate-period-value {
+  width: 86px; background: var(--card); border: 1.5px solid var(--hairline);
+  border-radius: 11px; padding: 8px 10px; font-size: 15px; font-weight: 600;
+  text-align: right; outline: none; transition: border-color .18s;
+}
+.rate-period-value:focus { border-color: var(--accent); }
+.rate-period-del { color: var(--ink-3); padding: 6px; transition: color .15s; }
+.rate-period-del:active { color: var(--danger); }
+.rate-period-del svg { width: 16px; height: 16px; }
+.rate-add {
+  display: flex; align-items: center; gap: 8px; padding: 14px 0 4px;
+}
+.rate-add-date {
+  position: relative; background: var(--card); border: 1.5px solid var(--hairline);
+  border-radius: 11px; padding: 9px 12px; font-size: 13.5px; font-weight: 600;
+  color: var(--ink-2); white-space: nowrap; flex: none; text-align: center; min-width: 74px;
+}
+.rate-add-date input { position: absolute; inset: 0; opacity: 0; width: 100%; }
+.rate-add .rate-period-value { flex: 1; width: auto; min-width: 0; text-align: center; }
+.rate-add .rate-period-value::placeholder { color: var(--ink-3); font-weight: 500; }
+.rate-add-btn { padding: 10px 14px; font-size: 13.5px; box-shadow: none; flex: none; }
+.rates-hint { font-size: 12px; color: var(--ink-2); padding: 12px 2px 4px; line-height: 1.5; }

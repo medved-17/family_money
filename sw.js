@@ -1,6 +1,6 @@
 // Service worker: офлайн-оболочка приложения (offline-first)
 
-const VERSION = 'v2';
+const VERSION = 'v3';
 const CACHE = `family-money-${VERSION}`;
 const FONT_CACHE = 'family-money-fonts';
 const ASSETS = [
@@ -9,7 +9,7 @@ const ASSETS = [
   './css/app.css',
   './js/app.js', './js/ui.js', './js/store.js', './js/db.js', './js/util.js',
   './js/rates.js', './js/sync.js', './js/agg.js', './js/charts.js',
-  './js/settings.js', './js/export.js', './js/xlsx.js', './js/pdf.js', './js/icons.js',
+  './js/settings.js', './js/export.js', './js/xlsx.js', './js/pdf.js', './js/icons.js', './js/picker.js',
   './manifest.webmanifest',
   './icons/icon.svg', './icons/icon-180.png', './icons/icon-192.png', './icons/icon-512.png',
 ];

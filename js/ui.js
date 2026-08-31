@@ -11,8 +11,14 @@ import {
 import { toBase, tipsToBase, rateToBase, getCachedRates, getCustomRate } from './rates.js';
 import { inPeriod, summarize, series } from './agg.js';
 import { donutChart, barChart } from './charts.js';
+import { openSheet, closeSheet } from './picker.js';
 
 const $ = id => document.getElementById(id);
+
+// Узкий разделитель тысяч: обычный пробел в моноширинном шрифте слишком широкий
+const narrow = s => String(s).replace(/[\s  ](?=\d)/g, '<span class="gsp"></span>');
+const nMoney = (n, cur) => narrow(fmtMoney(n, cur));
+const nNum = (n, f) => narrow(fmtNum(n, f));
 
 // Текущие периоды экранов
 export const ui = {
@@ -88,7 +94,7 @@ export function renderHome() {
   $('home-authors').innerHTML = ['sonya', 'nikita'].map(a => `
     <div class="author-pill">
       <span class="ava ava-${a}">${AUTHORS[a].letter}</span>
-      <span class="author-pill-info"><span class="author-pill-name">${AUTHORS[a].name}</span><span class="author-pill-sum">${fmtMoney(round2(s.byAuthor[a] || 0), base())}</span></span>
+      <span class="author-pill-info"><span class="author-pill-name">${AUTHORS[a].name}</span><span class="author-pill-sum">${nMoney(round2(s.byAuthor[a] || 0), base())}</span></span>
     </div>`).join('');
 
   // топ категорий
@@ -102,7 +108,7 @@ export function renderHome() {
         <span class="cat-bar-name"><span>${escapeHtml(cat.name)}</span><span class="pct">${pct}%</span></span>
         <span class="cat-bar-track"><span class="cat-bar-fill" style="width:${pct}%;background:${cat.color}"></span></span>
       </span>
-      <span class="cat-bar-sum num">${fmtNum(round2(value))}</span>
+      <span class="cat-bar-sum num">${nNum(round2(value))}</span>
     </div>`;
   }).join('') : emptyBlock('🪺', 'Пока нет трат за этот период');
 
@@ -122,9 +128,9 @@ function txRowHTML(e) {
   const cat = categoryById(e.category);
   const d = new Date(e.spentAt);
   const inBase = e.currency !== base()
-    ? `<div class="tx-base">≈ ${fmtMoney(round2(toBase(e, base())), base())}</div>` : '';
+    ? `<div class="tx-base">≈ ${nMoney(round2(toBase(e, base())), base())}</div>` : '';
   const tips = e.tips > 0
-    ? `<div class="tx-tips">🤝 +${fmtNum(e.tips)} ${CUR_SYMBOL[e.currency]}</div>` : '';
+    ? `<div class="tx-tips">🤝 +${nNum(e.tips)} ${CUR_SYMBOL[e.currency]}</div>` : '';
   return `
   <button class="tx-row" data-tx="${e.id}">
     <span class="tx-emoji" style="background:${cat.color}22">${cat.emoji}
@@ -135,7 +141,7 @@ function txRowHTML(e) {
       <div class="tx-sub">${e.note ? escapeHtml(cat.name) + ' · ' : ''}${AUTHORS[e.author]?.name || ''} · ${fmtDay(d)} ${fmtTime(d)}</div>
     </span>
     <span class="tx-right">
-      <div class="tx-amount">−${fmtMoney(e.amount, e.currency)}</div>
+      <div class="tx-amount">−${nMoney(e.amount, e.currency)}</div>
       ${tips}${inBase}
     </span>
   </button>`;
@@ -166,8 +172,8 @@ export function renderHistory() {
 
   const list = historyExpenses();
   const s = summarize(list, base());
-  $('history-summary').textContent = list.length
-    ? `${list.length} ${plural(list.length, 'операция', 'операции', 'операций')} · ${fmtMoney(round2(s.total), base())}${s.tips > 0.005 ? ` · чаевые ${fmtMoney(round2(s.tips), base())}` : ''}`
+  $('history-summary').innerHTML = list.length
+    ? narrow(`${list.length} ${plural(list.length, 'операция', 'операции', 'операций')} · ${fmtMoney(round2(s.total), base())}${s.tips > 0.005 ? ` · чаевые ${fmtMoney(round2(s.tips), base())}` : ''}`)
     : '';
 
   // группировка по дням
@@ -185,16 +191,16 @@ export function renderHistory() {
     <div class="day-group">
       <div class="day-head">
         <span>${fmtDay(g.date)}</span>
-        <span class="num">${fmtMoney(round2(daySum), base())}</span>
+        <span class="num">${nMoney(round2(daySum), base())}</span>
       </div>
       <div class="day-card">${g.items.map(txRowHTML).join('')}</div>
     </div>`;
   }).join('') : emptyBlock('🔍', 'Нет операций по выбранным фильтрам');
 }
 
-function setChip(selectId, text, active) {
-  $(selectId + '-text').textContent = text;
-  $(selectId).closest('.filter-chip').classList.toggle('on', active);
+function setChip(id, text, active) {
+  $(id + '-text').textContent = text;
+  $(id + '-chip').classList.toggle('on', active);
 }
 
 function plural(n, one, few, many) {
@@ -232,10 +238,10 @@ export function renderStats() {
 
   $('stats-body').innerHTML = `
     <div class="stat-grid">
-      ${statTile('Всего потрачено', fmtMoney(round2(s.total), base()), `${s.count} ${plural(s.count, 'покупка', 'покупки', 'покупок')}`)}
-      ${statTile('Чаевые', fmtMoney(round2(s.tips), base()), s.total > 0 ? `${(s.tips / s.total * 100).toFixed(1).replace('.', ',')}% от расходов` : '')}
-      ${statTile('Средний чек', fmtMoney(round2(avg), base()), 'с чаевыми')}
-      ${statTile('Средний чек', fmtMoney(round2(avgNoTips), base()), 'без чаевых')}
+      ${statTile('Всего потрачено', nMoney(round2(s.total), base()), `${s.count} ${plural(s.count, 'покупка', 'покупки', 'покупок')}`)}
+      ${statTile('Чаевые', nMoney(round2(s.tips), base()), s.total > 0 ? `${(s.tips / s.total * 100).toFixed(1).replace('.', ',')}% от расходов` : '')}
+      ${statTile('Средний чек', nMoney(round2(avg), base()), 'с чаевыми')}
+      ${statTile('Средний чек', nMoney(round2(avgNoTips), base()), 'без чаевых')}
     </div>
 
     ${s.count ? `
@@ -254,7 +260,7 @@ export function renderStats() {
               <span class="cat-bar-name"><span>${escapeHtml(cat.name)}</span><span class="pct">${pct}%</span></span>
               <span class="cat-bar-track"><span class="cat-bar-fill" style="width:${pct}%;background:${cat.color}"></span></span>
             </span>
-            <span class="cat-bar-sum num">${fmtNum(round2(value))}</span>
+            <span class="cat-bar-sum num">${nNum(round2(value))}</span>
           </div>`;
         }).join('')}
       </div>
@@ -271,7 +277,7 @@ export function renderStats() {
           <span class="author-stat-info">
             <span class="author-stat-top">
               <span>${AUTHORS[a].name}</span>
-              <span class="num">${fmtMoney(round2(v), base())} <span class="pct">· ${pct}%</span></span>
+              <span class="num">${nMoney(round2(v), base())} <span class="pct">· ${pct}%</span></span>
             </span>
             <span class="author-stat-track">
               <span class="author-stat-fill" style="width:${pct}%;background:${authorDotColor(a)}"></span>
@@ -295,8 +301,8 @@ export function renderStats() {
           <span><span class="cur-name">${CUR_SYMBOL[cur]} ${cur}</span>
             <span class="cur-sub"> · ${v.count} ${plural(v.count, 'операция', 'операции', 'операций')}</span></span>
           <span style="text-align:right">
-            <div class="num">${fmtMoney(round2(v.orig), cur)}</div>
-            ${cur !== base() ? `<div class="cur-sub num">≈ ${fmtMoney(round2(v.base), base())}</div>` : ''}
+            <div class="num">${nMoney(round2(v.orig), cur)}</div>
+            ${cur !== base() ? `<div class="cur-sub num">≈ ${nMoney(round2(v.base), base())}</div>` : ''}
           </span>
         </div>`).join('')}
     </section>
@@ -349,14 +355,12 @@ export function openAddSheet(expense = null) {
   $('add-date').value = toLocalInput(sheet.spentAt || new Date());
 
   renderSheet();
-  $('sheet-backdrop').classList.remove('hidden');
-  $('add-sheet').classList.remove('hidden');
+  openSheet($('add-sheet'));
 }
 
 export function closeAddSheet() {
   sheet.open = false;
-  $('sheet-backdrop').classList.add('hidden');
-  $('add-sheet').classList.add('hidden');
+  closeSheet($('add-sheet'));
   $('add-note').blur();
 }
 
@@ -373,8 +377,8 @@ export function renderSheet() {
   // сумма и чаевые
   const amountView = sheet.amountStr || '0';
   $('amount-display').innerHTML =
-    `${escapeHtml(fmtEntry(amountView))} <span class="amount-cur">${CUR_SYMBOL[sheet.currency]}</span>`;
-  $('tips-display').textContent = sheet.tipsStr ? fmtEntry(sheet.tipsStr) : '+';
+    `${narrow(fmtEntry(amountView))} <span class="amount-cur">${CUR_SYMBOL[sheet.currency]}</span>`;
+  $('tips-display').innerHTML = sheet.tipsStr ? narrow(fmtEntry(sheet.tipsStr)) : '+';
   $('amount-box').classList.toggle('on', sheet.target === 'amount');
   $('tips-box').classList.toggle('on', sheet.target === 'tips');
 
@@ -398,10 +402,10 @@ export function renderSheet() {
   const d = sheet.spentAt;
   $('add-date-text').textContent = d ? `${fmtDay(d)} ${fmtTime(d)}` : 'Сейчас';
 
-  // строка курса: ручной → свой курс семьи → рыночный
+  // строка курса: ручной → свой курс семьи на дату покупки → рыночный
   const b = base();
   if (sheet.currency !== b) {
-    const custom = getCustomRate(sheet.currency, b);
+    const custom = getCustomRate(sheet.currency, b, (sheet.spentAt || new Date()).toISOString());
     let rate, label = '';
     if (sheet.manualRate && sheet.manualRate.base === b) {
       rate = sheet.manualRate.value; label = ' (вручную)';

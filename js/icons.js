@@ -15,6 +15,8 @@ export const I = {
   x: svg('<path d="M6 6l12 12M18 6L6 18"/>'),
   back: svg('<path d="M15 5l-7 7 7 7"/>'),
   fwd: svg('<path d="M9 5l7 7-7 7"/>'),
+  down: svg('<path d="M6 9.5l6 6 6-6"/>'),
+  check: svg('<path d="M4.5 12.5l4.8 4.8L19.5 6.8"/>'),
   download: svg('<path d="M12 3v11.5m0 0 4.2-4.2M12 14.5 7.8 10.3"/><path d="M4 17v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2"/>'),
   calendar: svg('<rect x="3.5" y="5" width="17" height="16" rx="3"/><path d="M8 3v4M16 3v4M3.5 10.5h17"/>'),
   pencil: svg('<path d="M14.5 5.5 18.5 9.5M4 20l1-4.5L16.2 4.3a1.8 1.8 0 0 1 2.5 0l1 1a1.8 1.8 0 0 1 0 2.5L8.5 19 4 20z"/>'),

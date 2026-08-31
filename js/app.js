@@ -10,8 +10,10 @@ import {
 } from './ui.js';
 import { renderSettings } from './settings.js';
 import { exportXlsx, exportPdf } from './export.js';
-import { toast, periodTitle } from './util.js';
+import { toast, periodTitle, CUR_SYMBOL, CURRENCIES } from './util.js';
 import { I } from './icons.js';
+import { showPicker, openSheet, closeSheet, closeAllSheets, initPicker } from './picker.js';
+import { getCustomRate } from './rates.js';
 
 const $ = id => document.getElementById(id);
 
@@ -24,7 +26,7 @@ function injectIcons() {
   document.querySelectorAll('.period-arrow').forEach(b => {
     b.innerHTML = b.dataset.dir === '-1' ? I.back : I.fwd;
   });
-  $('history-clear-filters').innerHTML = I.x;
+  document.querySelector('#keypad [data-k="back"]').innerHTML = I.back;
   $('stats-export-btn').innerHTML = I.download;
   $('export-xlsx').insertAdjacentHTML('afterbegin', I.table);
   $('export-pdf').insertAdjacentHTML('afterbegin', I.doc);
@@ -124,16 +126,52 @@ function bindEvents() {
       renderStats();
     }));
 
-  // фильтры истории
+  // фильтры истории — красивые пикеры вместо нативных селектов
   const f = ui.historyFilter;
-  $('f-period').addEventListener('change', e => { f.period = e.target.value; renderHistory(); });
-  $('f-author').addEventListener('change', e => { f.author = e.target.value; renderHistory(); });
-  $('f-cat').addEventListener('change', e => { f.category = e.target.value; renderHistory(); });
-  $('f-cur').addEventListener('change', e => { f.currency = e.target.value; renderHistory(); });
-  $('history-clear-filters').addEventListener('click', () => {
-    Object.assign(f, { period: 'month', author: '', category: '', currency: '' });
-    $('f-period').value = 'month'; $('f-author').value = ''; $('f-cat').value = ''; $('f-cur').value = '';
-    renderHistory();
+  $('f-period-chip').addEventListener('click', async () => {
+    const v = await showPicker({
+      title: 'Период', value: f.period,
+      options: [
+        { value: 'week', label: 'Неделя' }, { value: 'month', label: 'Месяц' },
+        { value: 'year', label: 'Год' }, { value: 'all', label: 'Всё время' },
+      ],
+    });
+    if (v !== null) { f.period = v; renderHistory(); }
+  });
+  $('f-author-chip').addEventListener('click', async () => {
+    const v = await showPicker({
+      title: 'Кто тратил', value: f.author,
+      options: [
+        { value: '', label: 'Оба' },
+        { value: 'sonya', label: 'Соня' },
+        { value: 'nikita', label: 'Никита' },
+      ],
+    });
+    if (v !== null) { f.author = v; renderHistory(); }
+  });
+  $('f-cat-chip').addEventListener('click', async () => {
+    const v = await showPicker({
+      title: 'Категория', value: f.category,
+      options: [
+        { value: '', label: 'Все категории' },
+        ...state.categories.filter(c => !c.deleted).map(c =>
+          ({ value: c.id, label: c.name, emoji: c.emoji })),
+      ],
+    });
+    if (v !== null) { f.category = v; renderHistory(); }
+  });
+  $('f-cur-chip').addEventListener('click', async () => {
+    const hidden = state.settings.hiddenCurrencies || [];
+    const used = new Set(state.expenses.filter(e => !e.deleted).map(e => e.currency));
+    const list = ['EUR', 'USD', 'TRY', 'RUB'].filter(c => !hidden.includes(c) || used.has(c));
+    const v = await showPicker({
+      title: 'Валюта', value: f.currency,
+      options: [
+        { value: '', label: 'Все валюты' },
+        ...list.map(c => ({ value: c, label: `${c} ${CUR_SYMBOL[c]}` })),
+      ],
+    });
+    if (v !== null) { f.currency = v; renderHistory(); }
   });
 
   // клики по операциям (редактирование)
@@ -149,8 +187,8 @@ function bindEvents() {
   $('fab-add').addEventListener('click', () => openAddSheet());
   $('add-cancel').addEventListener('click', closeAddSheet);
   $('sheet-backdrop').addEventListener('click', () => {
-    closeAddSheet();
-    $('export-sheet').classList.add('hidden');
+    sheet.open = false;
+    closeAllSheets();
   });
   $('add-delete').addEventListener('click', deleteSheetExpense);
 
@@ -208,13 +246,9 @@ function bindEvents() {
     const { period, expenses } = statsExpensesAndPeriod();
     $('export-period-note').textContent =
       `${periodTitle(period)} · ${expenses.length} операций · базовая валюта ${state.settings.baseCurrency}`;
-    $('export-sheet').classList.remove('hidden');
-    $('sheet-backdrop').classList.remove('hidden');
+    openSheet($('export-sheet'));
   });
-  $('export-cancel').addEventListener('click', () => {
-    $('export-sheet').classList.add('hidden');
-    $('sheet-backdrop').classList.add('hidden');
-  });
+  $('export-cancel').addEventListener('click', () => closeSheet($('export-sheet')));
   $('export-xlsx').addEventListener('click', () => {
     const { period, expenses } = statsExpensesAndPeriod();
     if (!expenses.length) { toast('Нет операций за период'); return; }
@@ -233,27 +267,7 @@ function bindEvents() {
   });
 }
 
-// список категорий в фильтре истории
-function fillCategoryFilter() {
-  const sel = $('f-cat');
-  const cur = sel.value;
-  sel.innerHTML = '<option value="">Все категории</option>' +
-    state.categories.filter(c => !c.deleted).map(c =>
-      `<option value="${c.id}">${c.emoji} ${c.name}</option>`).join('');
-  sel.value = cur;
-}
 
-// фильтр валют: выключенные не показываем, если по ним нет операций
-function fillCurrencyFilter() {
-  const sel = $('f-cur');
-  const cur = sel.value;
-  const hidden = state.settings.hiddenCurrencies || [];
-  const used = new Set(state.expenses.filter(e => !e.deleted).map(e => e.currency));
-  const list = ['EUR', 'USD', 'TRY', 'RUB'].filter(c => !hidden.includes(c) || used.has(c));
-  sel.innerHTML = '<option value="">Все валюты</option>' +
-    list.map(c => `<option value="${c}">${c}</option>`).join('');
-  sel.value = list.includes(cur) ? cur : '';
-}
 
 function updateSyncIcon() {
   $('sync-icon').innerHTML = syncState.connected ? I.cloudCheck : I.cloudOff;
@@ -268,18 +282,21 @@ async function main() {
   await runOnboarding();
 
   $('app').classList.remove('hidden');
-  fillCategoryFilter();
-  fillCurrencyFilter();
+  initPicker();
   showScreen('home');
 
   subscribe((what) => {
-    if (what === 'categories') fillCategoryFilter();
-    if (what === 'settings' || what === 'expenses') fillCurrencyFilter();
     if (what === 'sync') { updateSyncIcon(); if (currentScreen === 'settings') renderSettings(); return; }
     render(currentScreen);
   });
 
-  refreshRates().then(() => render(currentScreen)); // не блокируем запуск (offline-first)
+  // рыночные курсы тянем из сети только если какой-то видимой валюте не задан свой курс
+  const st = state.settings;
+  const needMarket = CURRENCIES.some(c =>
+    c !== st.baseCurrency &&
+    !(st.hiddenCurrencies || []).includes(c) &&
+    !getCustomRate(c, st.baseCurrency));
+  if (needMarket) refreshRates().then(() => render(currentScreen));
   initSync().then(updateSyncIcon);
   updateSyncIcon();
 

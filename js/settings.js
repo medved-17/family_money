@@ -6,9 +6,10 @@ import {
 } from './store.js';
 import { db } from './db.js';
 import { AUTHORS, CUR_SYMBOL, CURRENCIES, fmtNum, escapeHtml, toast, downloadBlob } from './util.js';
-import { getCachedRates, refreshRates, getCustomRate, rateToBase } from './rates.js';
+import { getCachedRates, getCustomRate, getCustomRateList, rateToBase } from './rates.js';
 import { syncState, getConfig, saveConfig, clearConfig, signIn, getCred } from './sync.js';
 import { I } from './icons.js';
+import { showPicker, openSheet, closeSheet } from './picker.js';
 
 const $ = id => document.getElementById(id);
 
@@ -26,7 +27,6 @@ export function renderSettings() {
   const s = state.settings;
   const prof = AUTHORS[state.profile];
   const rates = getCachedRates();
-  const ratesAge = rates.ts ? new Date(rates.ts).toLocaleString('ru-RU', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }) : 'ещё не загружены';
   const cred = getCred();
 
   const catRows = state.categories.filter(c => !c.deleted).map(c => `
@@ -54,21 +54,11 @@ export function renderSettings() {
     <div class="set-group">
       <div class="set-group-title">Деньги</div>
       <div class="set-card">
-        <label class="set-row">
+        <button class="set-row" id="set-base-cur-row">
           <span class="set-row-ico">${I.wallet}</span>
           <span class="set-row-label">Базовая валюта
             <span class="set-row-sub">Все итоги и аналитика — в ней</span></span>
           <span class="set-row-value num">${s.baseCurrency} ${CUR_SYMBOL[s.baseCurrency]}</span>
-          <span class="set-row-chev">${I.fwd}</span>
-          <select id="set-base-cur">
-            ${['RUB', 'EUR', 'USD', 'TRY'].map(c =>
-              `<option value="${c}" ${c === s.baseCurrency ? 'selected' : ''}>${c} ${CUR_SYMBOL[c]}</option>`).join('')}
-          </select>
-        </label>
-        <button class="set-row" id="set-refresh-rates">
-          <span class="set-row-ico">${I.refresh}</span>
-          <span class="set-row-label">Обновить рыночные курсы
-            <span class="set-row-sub">Загружены: ${ratesAge}</span></span>
           <span class="set-row-chev">${I.fwd}</span>
         </button>
       </div>
@@ -79,23 +69,23 @@ export function renderSettings() {
       <div class="set-card">
         ${CURRENCIES.filter(c => c !== s.baseCurrency).map(cur => {
           const hidden = (s.hiddenCurrencies || []).includes(cur);
-          const custom = getCustomRate(cur, s.baseCurrency);
+          const list = getCustomRateList(cur, s.baseCurrency);
           const market = rateToBase(getCachedRates().perUSD, cur, s.baseCurrency);
-          const sub = custom
-            ? `Свой курс: 1 ${CUR_SYMBOL[cur]} = ${fmtNum(custom, 4)} ${CUR_SYMBOL[s.baseCurrency]}`
-            : `Рыночный: 1 ${CUR_SYMBOL[cur]} ≈ ${fmtNum(market, 4)} ${CUR_SYMBOL[s.baseCurrency]}`;
+          const sub = list.length
+            ? list.map(e => `${e.from ? 'с ' + e.from.slice(8, 10) + '.' + e.from.slice(5, 7) + ': ' : ''}${fmtNum(e.value, 4)} ${CUR_SYMBOL[s.baseCurrency]}`).join(' · ')
+            : `Рыночный: ≈ ${fmtNum(market, 4)} ${CUR_SYMBOL[s.baseCurrency]}`;
           return `
           <div class="cat-manage-row">
             <span class="cat-bar-emoji num" style="background:var(--accent-soft);color:var(--accent);font-size:15px;font-weight:700">${CUR_SYMBOL[cur]}</span>
-            <span class="cat-manage-name"><span class="${hidden ? 'struck' : ''}">${cur}</span>
-              <span class="set-row-sub num">${hidden ? 'Выключена' : sub}</span></span>
-            <button class="cat-manage-act" data-cur-rate="${cur}" title="Свой курс">${I.pencil}</button>
+            <button class="cat-manage-name" data-cur-rate="${cur}" style="text-align:left;padding:0"><span class="${hidden ? 'struck' : ''}">${cur}</span>
+              <span class="set-row-sub num">${hidden ? 'Выключена' : sub}</span></button>
+            <button class="cat-manage-act" data-cur-rate="${cur}" title="Курсы по датам">${I.pencil}</button>
             <button class="cat-manage-act" data-cur-hide="${cur}">${hidden ? 'Включить' : 'Выключить'}</button>
           </div>`;
         }).join('')}
         <div class="set-row" style="pointer-events:none">
           <span class="set-row-ico">${I.spark}</span>
-          <span class="set-row-sub" style="flex:1">Свой курс — по которому вы реально покупали валюту: он важнее рыночного. Выключенная валюта не показывается при добавлении траты.</span>
+          <span class="set-row-sub" style="flex:1">Курс задаётся вручную и может меняться с даты: покупки до неё считаются по старому курсу, после — по новому. Выключенная валюта не показывается при добавлении траты.</span>
         </div>
       </div>
     </div>
@@ -103,16 +93,12 @@ export function renderSettings() {
     <div class="set-group">
       <div class="set-group-title">Вид</div>
       <div class="set-card">
-        <label class="set-row">
+        <button class="set-row" id="set-theme-row">
           <span class="set-row-ico">${I.eye}</span>
           <span class="set-row-label">Тема</span>
           <span class="set-row-value">${THEME_NAMES[getTheme()]}</span>
           <span class="set-row-chev">${I.fwd}</span>
-          <select id="set-theme">
-            ${Object.entries(THEME_NAMES).map(([v, n]) =>
-              `<option value="${v}" ${v === getTheme() ? 'selected' : ''}>${n}</option>`).join('')}
-          </select>
-        </label>
+        </button>
       </div>
     </div>
 
@@ -205,8 +191,14 @@ function bindSettings() {
     }
   };
 
-  $('set-base-cur').onchange = async (e) => {
-    const next = e.target.value;
+  $('set-base-cur-row').onclick = async () => {
+    const next = await showPicker({
+      title: 'Базовая валюта',
+      value: state.settings.baseCurrency,
+      options: ['RUB', 'EUR', 'USD', 'TRY'].map(c =>
+        ({ value: c, label: `${c} ${CUR_SYMBOL[c]}` })),
+    });
+    if (!next || next === state.settings.baseCurrency) return;
     // базовую валюту нельзя держать выключенной
     const hiddenCurrencies = (state.settings.hiddenCurrencies || []).filter(c => c !== next);
     await saveSettings({ baseCurrency: next, hiddenCurrencies });
@@ -214,28 +206,9 @@ function bindSettings() {
     toast(`Базовая валюта: ${next}`);
   };
 
-  // свой курс валюты («доллар покупали по 82»)
-  document.querySelectorAll('[data-cur-rate]').forEach(b => b.onclick = async () => {
-    const cur = b.dataset.curRate;
-    const bse = state.settings.baseCurrency;
-    const current = getCustomRate(cur, bse);
-    const raw = prompt(
-      `1 ${cur} = ? ${bse}\n\nПустое поле — вернуть рыночный курс.`,
-      current ? String(current).replace('.', ',') : '');
-    if (raw === null) return;
-    const customRates = { ...(state.settings.customRates || {}) };
-    const v = parseFloat(raw.replace(',', '.').replace(/\s/g, ''));
-    if (raw.trim() === '' || !isFinite(v) || v <= 0) {
-      delete customRates[cur];
-      await saveSettings({ customRates });
-      toast(`${cur}: рыночный курс`);
-    } else {
-      customRates[cur] = { base: bse, value: v };
-      await saveSettings({ customRates });
-      toast(`Свой курс: 1 ${CUR_SYMBOL[cur]} = ${fmtNum(v, 4)} ${CUR_SYMBOL[bse]}`);
-    }
-    renderSettings();
-  });
+  // курсы валюты по датам
+  document.querySelectorAll('[data-cur-rate]').forEach(b => b.onclick = () =>
+    openRatesEditor(b.dataset.curRate));
 
   // выключение валюты
   document.querySelectorAll('[data-cur-hide]').forEach(b => b.onclick = async () => {
@@ -246,16 +219,15 @@ function bindSettings() {
     renderSettings();
   });
 
-  $('set-theme').onchange = (e) => {
-    applyTheme(e.target.value);
+  $('set-theme-row').onclick = async () => {
+    const v = await showPicker({
+      title: 'Тема',
+      value: getTheme(),
+      options: Object.entries(THEME_NAMES).map(([value, label]) => ({ value, label })),
+    });
+    if (v === null) return;
+    applyTheme(v);
     renderSettings();
-  };
-
-  $('set-refresh-rates').onclick = async () => {
-    toast('Обновляю курсы…');
-    const r = await refreshRates(true);
-    renderSettings();
-    toast(r.ts && Date.now() - r.ts < 60000 ? 'Курсы обновлены' : 'Нет сети — используются сохранённые курсы');
   };
 
   $('set-add-cat').onclick = async () => {
@@ -364,4 +336,99 @@ function bindSettings() {
     await db.wipe();
     location.reload();
   };
+}
+
+// ─── Редактор курсов валюты по датам ───
+// «Покупки до даты — по одному курсу, после — по другому»
+function ratePeriods(cur) {
+  const bse = state.settings.baseCurrency;
+  return getCustomRateList(cur, bse).map(e => ({ ...e }));
+}
+
+async function saveRatePeriods(cur, list) {
+  const bse = state.settings.baseCurrency;
+  const all = state.settings.customRates || {};
+  const others = (Array.isArray(all[cur]) ? all[cur] : []).filter(e => e.base !== bse);
+  const customRates = { ...all, [cur]: [...others, ...list] };
+  if (!customRates[cur].length) delete customRates[cur];
+  await saveSettings({ customRates });
+}
+
+function openRatesEditor(cur) {
+  const $b = $('rates-body');
+  const bse = state.settings.baseCurrency;
+  $('rates-title').textContent = `Курс ${cur} → ${bse}`;
+
+  const render = () => {
+    const list = ratePeriods(cur).sort((a, b) => ((a.from || '') < (b.from || '') ? -1 : 1));
+    $b.innerHTML = `
+      ${list.length ? '' : `<p class="rates-empty">Свой курс не задан — используется рыночный.</p>`}
+      ${list.map((e, i) => `
+        <div class="rate-period">
+          <span class="rate-period-when">${e.from
+            ? 'с ' + new Date(e.from + 'T00:00').toLocaleDateString('ru-RU', { day: 'numeric', month: 'short', year: 'numeric' })
+            : 'С самого начала'}</span>
+          <span class="rate-period-eq num">1 ${CUR_SYMBOL[cur]} =</span>
+          <input class="rate-period-value num" type="text" inputmode="decimal" value="${String(e.value).replace('.', ',')}" data-i="${i}">
+          <span class="num" style="color:var(--ink-2)">${CUR_SYMBOL[bse]}</span>
+          <button class="rate-period-del" data-del="${i}" aria-label="Удалить">${I.x}</button>
+        </div>`).join('')}
+      <div class="rate-add">
+        <label class="rate-add-date">
+          <span id="rate-add-date-text">${list.length ? 'Дата' : 'С начала'}</span>
+          <input type="date" id="rate-add-date">
+        </label>
+        <input class="rate-period-value num" type="text" inputmode="decimal" id="rate-add-value"
+               placeholder="Курс">
+        <button class="btn btn-primary rate-add-btn" id="rate-add-btn">Добавить</button>
+      </div>
+      <p class="rates-hint">Курс действует для всех покупок начиная с указанной даты — до следующего заданного курса. Без даты — с самого начала.</p>
+    `;
+
+    // правка значения
+    $b.querySelectorAll('.rate-period-value[data-i]').forEach(inp => inp.onchange = async () => {
+      const v = parseFloat(inp.value.replace(',', '.').replace(/\s/g, ''));
+      const fresh = ratePeriods(cur).sort((a, b) => ((a.from || '') < (b.from || '') ? -1 : 1));
+      const i = +inp.dataset.i;
+      if (!isFinite(v) || v <= 0) { inp.value = String(fresh[i].value).replace('.', ','); return; }
+      fresh[i].value = v;
+      await saveRatePeriods(cur, fresh);
+      toast(`Курс сохранён: 1 ${CUR_SYMBOL[cur]} = ${fmtNum(v, 4)} ${CUR_SYMBOL[bse]}`);
+      renderSettings();
+    });
+
+    // удаление периода
+    $b.querySelectorAll('[data-del]').forEach(btn => btn.onclick = async () => {
+      const fresh = ratePeriods(cur).sort((a, b) => ((a.from || '') < (b.from || '') ? -1 : 1));
+      fresh.splice(+btn.dataset.del, 1);
+      await saveRatePeriods(cur, fresh);
+      renderSettings();
+      render();
+    });
+
+    // выбранная дата в чипе
+    const dateInp = $b.querySelector('#rate-add-date');
+    dateInp.onchange = () => {
+      $b.querySelector('#rate-add-date-text').textContent = dateInp.value
+        ? new Date(dateInp.value + 'T00:00').toLocaleDateString('ru-RU', { day: 'numeric', month: 'short' })
+        : 'Дата';
+    };
+
+    // добавление периода
+    $b.querySelector('#rate-add-btn').onclick = async () => {
+      const v = parseFloat($b.querySelector('#rate-add-value').value.replace(',', '.').replace(/\s/g, ''));
+      if (!isFinite(v) || v <= 0) { toast('Введите курс — например 82'); return; }
+      const from = dateInp.value || null;
+      const fresh = ratePeriods(cur).filter(e => (e.from || null) !== from);
+      fresh.push({ from, base: bse, value: v });
+      await saveRatePeriods(cur, fresh);
+      toast(from ? `С ${new Date(from + 'T00:00').toLocaleDateString('ru-RU', { day: 'numeric', month: 'short' })}: 1 ${CUR_SYMBOL[cur]} = ${fmtNum(v, 4)} ${CUR_SYMBOL[bse]}` : 'Курс сохранён');
+      renderSettings();
+      render();
+    };
+  };
+
+  render();
+  $('rates-cancel').onclick = () => closeSheet($('rates-sheet'));
+  openSheet($('rates-sheet'));
 }
