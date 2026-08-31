@@ -40,6 +40,37 @@ function authorDotColor(a) {
 }
 
 // ─────────────── ГЛАВНАЯ ───────────────
+let heroLast = null, heroAnim = 0;
+
+function heroMoneyHTML(v, cur) {
+  const r = round2(v);
+  const int = Math.trunc(r);
+  const cents = Math.round(Math.abs(r - int) * 100);
+  // узкий разделитель тысяч (в моноширинном шрифте обычный пробел слишком широкий)
+  const intStr = new Intl.NumberFormat('ru-RU').format(int)
+    .replace(/[\s  ]/g, '<span class="gsp"></span>');
+  const centsStr = cents ? `<span class="cents">,${String(cents).padStart(2, '0')}</span>` : '';
+  return `${intStr}${centsStr} <span class="cur">${CUR_SYMBOL[cur]}</span>`;
+}
+
+// докручивание итога (count-up)
+function renderHeroTotal(total) {
+  const el = $('home-total');
+  const from = heroLast === null ? total * 0.5 : heroLast;
+  heroLast = total;
+  const id = ++heroAnim;
+  const dur = Math.abs(total - from) < 0.01 ? 0 : 520;
+  const start = performance.now();
+  const step = (now) => {
+    if (id !== heroAnim) return;
+    const t = dur ? Math.min((now - start) / dur, 1) : 1;
+    const eased = 1 - Math.pow(1 - t, 3);
+    el.innerHTML = heroMoneyHTML(from + (total - from) * eased, base());
+    if (t < 1) requestAnimationFrame(step);
+  };
+  requestAnimationFrame(step);
+}
+
 export function renderHome() {
   const p = ui.homePeriod;
   $('home-period-label').textContent = periodTitle(p);
@@ -49,7 +80,7 @@ export function renderHome() {
   const expenses = inPeriod(p);
   const s = summarize(expenses, base());
 
-  $('home-total').textContent = fmtMoney(round2(s.total), base());
+  renderHeroTotal(s.total);
   $('home-tips-line').textContent = s.tips > 0.005
     ? `из них чаевые ${fmtMoney(round2(s.tips), base())}` : '';
 

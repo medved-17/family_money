@@ -11,8 +11,24 @@ import {
 import { renderSettings } from './settings.js';
 import { exportXlsx, exportPdf } from './export.js';
 import { toast, periodTitle } from './util.js';
+import { I } from './icons.js';
 
 const $ = id => document.getElementById(id);
+
+// Разложить SVG-иконки по статичной разметке
+function injectIcons() {
+  document.querySelectorAll('.tab[data-ico]').forEach(t => {
+    t.insertAdjacentHTML('afterbegin', I[t.dataset.ico]);
+  });
+  $('fab-add').innerHTML = I.plus;
+  document.querySelectorAll('.period-arrow').forEach(b => {
+    b.innerHTML = b.dataset.dir === '-1' ? I.back : I.fwd;
+  });
+  $('history-clear-filters').innerHTML = I.x;
+  $('stats-export-btn').innerHTML = I.download;
+  $('export-xlsx').insertAdjacentHTML('afterbegin', I.table);
+  $('export-pdf').insertAdjacentHTML('afterbegin', I.doc);
+}
 
 let currentScreen = 'home';
 
@@ -228,12 +244,13 @@ function fillCategoryFilter() {
 }
 
 function updateSyncIcon() {
-  $('sync-icon').textContent = syncState.connected ? '☁️' : '📴';
-  $('home-sync-badge').style.opacity = syncState.connected ? 1 : 0.55;
+  $('sync-icon').innerHTML = syncState.connected ? I.cloudCheck : I.cloudOff;
+  $('home-sync-badge').style.color = syncState.connected ? 'var(--ok)' : '';
 }
 
 // ─── Запуск ───
 async function main() {
+  injectIcons();
   await initStore();
   bindEvents();
   await runOnboarding();

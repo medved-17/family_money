@@ -5,15 +5,15 @@ import { uuid, sha256 } from './util.js';
 import { currentSnapshot } from './rates.js';
 
 export const DEFAULT_CATEGORIES = [
-  { id: 'food',      name: 'Еда и рестораны', emoji: '🍽️', color: '#e8a13c' },
-  { id: 'groceries', name: 'Продукты',        emoji: '🛒', color: '#7bab4e' },
-  { id: 'transport', name: 'Транспорт',       emoji: '🚕', color: '#4a90d9' },
-  { id: 'housing',   name: 'Жильё',           emoji: '🏠', color: '#8a6ec9' },
-  { id: 'fun',       name: 'Развлечения',     emoji: '🎉', color: '#d95c8a' },
-  { id: 'shopping',  name: 'Покупки',         emoji: '🛍️', color: '#3aa89a' },
-  { id: 'health',    name: 'Здоровье и уход', emoji: '💊', color: '#d97455', },
-  { id: 'gifts',     name: 'Подарки',         emoji: '🎁', color: '#c94f6d' },
-  { id: 'other',     name: 'Другое',          emoji: '📎', color: '#8d8a7e' },
+  { id: 'food',      name: 'Еда и рестораны', emoji: '🍽️', color: '#DFA036' },
+  { id: 'groceries', name: 'Продукты',        emoji: '🛒', color: '#7FA65A' },
+  { id: 'transport', name: 'Транспорт',       emoji: '🚕', color: '#5E9ECF' },
+  { id: 'housing',   name: 'Жильё',           emoji: '🏠', color: '#9C7BD1' },
+  { id: 'fun',       name: 'Развлечения',     emoji: '🎉', color: '#D96C9C' },
+  { id: 'shopping',  name: 'Покупки',         emoji: '🛍️', color: '#4FB3A5' },
+  { id: 'health',    name: 'Здоровье и уход', emoji: '💊', color: '#CD5A5A' },
+  { id: 'gifts',     name: 'Подарки',         emoji: '🎁', color: '#DE8550' },
+  { id: 'other',     name: 'Другое',          emoji: '📎', color: '#8F8B80' },
 ];
 
 const listeners = new Set();
@@ -55,6 +55,14 @@ export async function initStore() {
     await db.putCategories(state.categories);
   } else {
     state.categories = categories.sort((a, b) => (a.sortOrder ?? 99) - (b.sortOrder ?? 99));
+    // миграция: подтягиваем актуальные цвета встроенных категорий (палитра дизайн-системы)
+    const defs = new Map(DEFAULT_CATEGORIES.map(c => [c.id, c]));
+    const patched = [];
+    for (const c of state.categories) {
+      const d = defs.get(c.id);
+      if (c.builtin && d && c.color !== d.color) { c.color = d.color; patched.push(c); }
+    }
+    if (patched.length) await db.putCategories(patched);
   }
 
   if (settings) Object.assign(state.settings, settings);

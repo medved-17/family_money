@@ -19,9 +19,9 @@ export function donutChart(segments, centerTitle, centerSub) {
   return `<svg viewBox="0 0 180 180" role="img">
     <g transform="rotate(-90 90 90)">${rings}</g>
     <text x="90" y="86" text-anchor="middle" font-size="19" font-weight="800"
-      fill="var(--ink)" font-family="inherit">${centerTitle}</text>
+      fill="var(--ink)" style="font-family:var(--mono)">${centerTitle}</text>
     <text x="90" y="104" text-anchor="middle" font-size="10.5" font-weight="600"
-      fill="var(--ink-2)" font-family="inherit">${centerSub}</text>
+      fill="var(--ink-2)" style="font-family:var(--mono)">${centerSub}</text>
   </svg>`;
 }
 
@@ -48,14 +48,14 @@ export function barChart(points, opts = {}) {
     if (i % every !== 0 && i !== n - 1) return '';
     const x = i * (bw + gap) + bw / 2;
     return `<text x="${x.toFixed(1)}" y="${H - 6}" text-anchor="middle" font-size="9.5"
-      fill="var(--ink-2)" font-family="inherit" font-weight="600">${p.label}</text>`;
+      fill="var(--ink-2)" style="font-family:var(--mono)" font-weight="600">${p.label}</text>`;
   }).join('');
 
   const maxPoint = points.find(p => p.value === max && p.value > 0);
   const maxLabel = maxPoint
     ? `<text x="${(points.indexOf(maxPoint) * (bw + gap) + bw / 2).toFixed(1)}" y="${padT - 6}"
         text-anchor="middle" font-size="10" font-weight="700" fill="var(--accent)"
-        font-family="inherit">${fmtNum(Math.round(max))}</text>`
+        style="font-family:var(--mono)">${fmtNum(Math.round(max))}</text>`
     : '';
 
   return `<svg viewBox="0 0 ${W} ${H}" role="img">${bars}${labels}${maxLabel}</svg>`;

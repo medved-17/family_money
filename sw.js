@@ -1,14 +1,15 @@
 // Service worker: офлайн-оболочка приложения (offline-first)
 
-const VERSION = 'v1';
+const VERSION = 'v2';
 const CACHE = `family-money-${VERSION}`;
+const FONT_CACHE = 'family-money-fonts';
 const ASSETS = [
   './',
   './index.html',
   './css/app.css',
   './js/app.js', './js/ui.js', './js/store.js', './js/db.js', './js/util.js',
   './js/rates.js', './js/sync.js', './js/agg.js', './js/charts.js',
-  './js/settings.js', './js/export.js', './js/xlsx.js', './js/pdf.js',
+  './js/settings.js', './js/export.js', './js/xlsx.js', './js/pdf.js', './js/icons.js',
   './manifest.webmanifest',
   './icons/icon.svg', './icons/icon-180.png', './icons/icon-192.png', './icons/icon-512.png',
 ];
@@ -28,6 +29,19 @@ self.addEventListener('activate', (e) => {
 self.addEventListener('fetch', (e) => {
   const url = new URL(e.request.url);
   if (e.request.method !== 'GET') return;
+
+  // шрифты Google — кэшируем для офлайна
+  if (url.hostname === 'fonts.googleapis.com' || url.hostname === 'fonts.gstatic.com') {
+    e.respondWith(
+      caches.open(FONT_CACHE).then(c =>
+        c.match(e.request).then(hit => hit || fetch(e.request).then(res => {
+          if (res.ok) c.put(e.request, res.clone());
+          return res;
+        }))
+      )
+    );
+    return;
+  }
   // курсы и Firebase — только сеть (у них своя офлайн-логика)
   if (url.origin !== location.origin) return;
 

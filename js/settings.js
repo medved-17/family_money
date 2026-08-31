@@ -8,8 +8,19 @@ import { db } from './db.js';
 import { AUTHORS, CUR_SYMBOL, escapeHtml, toast, downloadBlob } from './util.js';
 import { getCachedRates, refreshRates } from './rates.js';
 import { syncState, getConfig, saveConfig, clearConfig, signIn, getCred } from './sync.js';
+import { I } from './icons.js';
 
 const $ = id => document.getElementById(id);
+
+const THEME_NAMES = { auto: 'Авто', light: 'Светлая', dark: 'Тёмная' };
+function getTheme() {
+  try { return localStorage.getItem('fm-theme') || 'auto'; } catch { return 'auto'; }
+}
+export function applyTheme(t) {
+  try { t === 'auto' ? localStorage.removeItem('fm-theme') : localStorage.setItem('fm-theme', t); } catch { /* приватный режим */ }
+  if (t === 'light' || t === 'dark') document.documentElement.dataset.theme = t;
+  else delete document.documentElement.dataset.theme;
+}
 
 export function renderSettings() {
   const s = state.settings;
@@ -22,7 +33,7 @@ export function renderSettings() {
     <div class="cat-manage-row">
       <span class="cat-bar-emoji" style="background:${c.color}22">${c.emoji}</span>
       <span class="cat-manage-name ${c.hidden ? 'hidden-cat' : ''}">${escapeHtml(c.name)}</span>
-      <button class="cat-manage-act" data-cat-rename="${c.id}">✏️</button>
+      <button class="cat-manage-act" data-cat-rename="${c.id}">${I.pencil}</button>
       <button class="cat-manage-act" data-cat-hide="${c.id}">${c.hidden ? 'Вернуть' : 'Скрыть'}</button>
     </div>`).join('');
 
@@ -35,7 +46,7 @@ export function renderSettings() {
           <span class="set-row-label">${prof?.name || '—'}
             <span class="set-row-sub">Профиль этого телефона</span></span>
           <span class="set-row-value">Сменить</span>
-          <span class="set-row-chev">›</span>
+          <span class="set-row-chev">${I.fwd}</span>
         </button>
       </div>
     </div>
@@ -44,22 +55,38 @@ export function renderSettings() {
       <div class="set-group-title">Деньги</div>
       <div class="set-card">
         <label class="set-row">
-          <span class="set-row-ico">💱</span>
+          <span class="set-row-ico">${I.wallet}</span>
           <span class="set-row-label">Базовая валюта
             <span class="set-row-sub">Все итоги и аналитика — в ней</span></span>
-          <span class="set-row-value">${s.baseCurrency} ${CUR_SYMBOL[s.baseCurrency]}</span>
-          <span class="set-row-chev">›</span>
+          <span class="set-row-value num">${s.baseCurrency} ${CUR_SYMBOL[s.baseCurrency]}</span>
+          <span class="set-row-chev">${I.fwd}</span>
           <select id="set-base-cur">
             ${['RUB', 'EUR', 'USD', 'TRY'].map(c =>
               `<option value="${c}" ${c === s.baseCurrency ? 'selected' : ''}>${c} ${CUR_SYMBOL[c]}</option>`).join('')}
           </select>
         </label>
         <button class="set-row" id="set-refresh-rates">
-          <span class="set-row-ico">🔄</span>
+          <span class="set-row-ico">${I.refresh}</span>
           <span class="set-row-label">Обновить курсы
             <span class="set-row-sub">Загружены: ${ratesAge}</span></span>
-          <span class="set-row-chev">›</span>
+          <span class="set-row-chev">${I.fwd}</span>
         </button>
+      </div>
+    </div>
+
+    <div class="set-group">
+      <div class="set-group-title">Вид</div>
+      <div class="set-card">
+        <label class="set-row">
+          <span class="set-row-ico">${I.eye}</span>
+          <span class="set-row-label">Тема</span>
+          <span class="set-row-value">${THEME_NAMES[getTheme()]}</span>
+          <span class="set-row-chev">${I.fwd}</span>
+          <select id="set-theme">
+            ${Object.entries(THEME_NAMES).map(([v, n]) =>
+              `<option value="${v}" ${v === getTheme() ? 'selected' : ''}>${n}</option>`).join('')}
+          </select>
+        </label>
       </div>
     </div>
 
@@ -68,7 +95,7 @@ export function renderSettings() {
       <div class="set-card">
         ${catRows}
         <button class="set-row" id="set-add-cat">
-          <span class="set-row-ico">➕</span>
+          <span class="set-row-ico" style="color:var(--accent)">${I.plus}</span>
           <span class="set-row-label" style="color:var(--accent)">Добавить категорию</span>
         </button>
       </div>
@@ -78,26 +105,26 @@ export function renderSettings() {
       <div class="set-group-title">Синхронизация</div>
       <div class="set-card">
         <div class="set-row" style="pointer-events:none">
-          <span class="set-row-ico">${syncState.connected ? '🟢' : syncState.configured ? '🟡' : '⚪️'}</span>
+          <span class="set-row-ico" style="color:${syncState.connected ? 'var(--ok)' : 'var(--ink-3)'}">${syncState.connected ? I.cloudCheck : I.cloudOff}</span>
           <span class="set-row-label">${syncState.connected ? 'Подключена' : syncState.configured ? 'Настроена, нужен вход' : 'Не настроена'}
             <span class="set-row-sub">${syncState.connected
               ? (syncState.lastSyncAt ? 'Обновлено ' + syncState.lastSyncAt.toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' }) : 'Ожидание данных…')
               : syncState.error || 'Работает через бесплатный Firebase — см. инструкцию в репозитории'}</span></span>
         </div>
         <button class="set-row" id="set-sync-config">
-          <span class="set-row-ico">🔧</span>
+          <span class="set-row-ico">${I.cloud}</span>
           <span class="set-row-label">${getConfig() ? 'Изменить конфиг Firebase' : 'Вставить конфиг Firebase'}</span>
-          <span class="set-row-chev">›</span>
+          <span class="set-row-chev">${I.fwd}</span>
         </button>
         ${getConfig() && !syncState.connected ? `
         <button class="set-row" id="set-sync-login">
-          <span class="set-row-ico">🔑</span>
+          <span class="set-row-ico">${I.key}</span>
           <span class="set-row-label">Войти в общий аккаунт${cred ? `<span class="set-row-sub">${escapeHtml(cred.email)}</span>` : ''}</span>
-          <span class="set-row-chev">›</span>
+          <span class="set-row-chev">${I.fwd}</span>
         </button>` : ''}
         ${getConfig() ? `
         <button class="set-row" id="set-sync-off">
-          <span class="set-row-ico">🚫</span>
+          <span class="set-row-ico">${I.x}</span>
           <span class="set-row-label">Отключить синхронизацию на этом телефоне</span>
         </button>` : ''}
       </div>
@@ -107,21 +134,21 @@ export function renderSettings() {
       <div class="set-group-title">Данные</div>
       <div class="set-card">
         <button class="set-row" id="set-backup">
-          <span class="set-row-ico">📦</span>
+          <span class="set-row-ico">${I.download}</span>
           <span class="set-row-label">Скачать резервную копию
             <span class="set-row-sub">Все операции и категории в одном файле</span></span>
-          <span class="set-row-chev">›</span>
+          <span class="set-row-chev">${I.fwd}</span>
         </button>
         <button class="set-row" id="set-restore">
-          <span class="set-row-ico">📥</span>
+          <span class="set-row-ico">${I.doc}</span>
           <span class="set-row-label">Восстановить из копии</span>
-          <span class="set-row-chev">›</span>
+          <span class="set-row-chev">${I.fwd}</span>
           <input type="file" id="set-restore-file" accept=".json,application/json" style="position:absolute;inset:0;opacity:0;width:100%">
         </button>
         <button class="set-row" id="set-change-pass">
-          <span class="set-row-ico">🔒</span>
+          <span class="set-row-ico">${I.lock}</span>
           <span class="set-row-label">Сменить пароль</span>
-          <span class="set-row-chev">›</span>
+          <span class="set-row-chev">${I.fwd}</span>
         </button>
       </div>
     </div>
@@ -129,7 +156,7 @@ export function renderSettings() {
     <div class="set-group">
       <div class="set-card">
         <button class="set-row danger" id="set-logout">
-          <span class="set-row-ico">🚪</span>
+          <span class="set-row-ico">${I.logout}</span>
           <span class="set-row-label">Выйти на этом устройстве</span>
         </button>
       </div>
@@ -156,6 +183,11 @@ function bindSettings() {
     await saveSettings({ baseCurrency: e.target.value });
     renderSettings();
     toast(`Базовая валюта: ${e.target.value}`);
+  };
+
+  $('set-theme').onchange = (e) => {
+    applyTheme(e.target.value);
+    renderSettings();
   };
 
   $('set-refresh-rates').onclick = async () => {
