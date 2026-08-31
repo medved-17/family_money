@@ -1,6 +1,6 @@
 // Точка входа: онбординг, навигация, привязка событий
 
-import { initStore, state, subscribe, setPassword, checkPassword, setUnlocked, setProfile, addCategory, saveSettings, saveBalances, deleteExpense } from './store.js';
+import { initStore, state, subscribe, setPassword, checkPassword, setUnlocked, setProfile, addCategory, saveSettings, saveBalances, saveWallet, deleteExpense } from './store.js';
 import { refreshRates } from './rates.js';
 import { initSync, syncState } from './sync.js';
 import {
@@ -71,15 +71,25 @@ function parseMoneyInput(value) {
   return parseFloat(clean);
 }
 
-function fillBalanceSheet() {
-  const balances = state.settings.balances || {};
+let balanceMode = 'auto';
+
+function renderBalanceSheet() {
+  const auto = balanceMode === 'auto';
+  $('balance-title').textContent = auto ? 'Исходные суммы' : 'Сколько осталось';
+  $('balance-hint').textContent = auto
+    ? 'Сколько было в начале. Остаток на главной = запасы − траты ± обмены.'
+    : 'Сколько реально осталось сейчас в каждой валюте. Траты и обмены не пересчитываем — показываем ровно эти числа.';
+  $('balance-mode').querySelectorAll('button').forEach(b =>
+    b.classList.toggle('on', b.dataset.mode === balanceMode));
+  const src = auto ? (state.settings.balances || {}) : (state.settings.manualRemaining || {});
   for (const cur of ['USD', 'TRY', 'RUB', 'EUR']) {
-    $(`balance-${cur}`).value = balances[cur] ? String(balances[cur]).replace('.', ',') : '';
+    $(`balance-${cur}`).value = src[cur] ? String(src[cur]).replace('.', ',') : '';
   }
 }
 
 function openBalanceSheet() {
-  fillBalanceSheet();
+  balanceMode = state.settings.remainingMode === 'manual' ? 'manual' : 'auto';
+  renderBalanceSheet();
   openSheet($('balance-sheet'));
   setTimeout(() => $('balance-USD').focus(), 180);
 }
@@ -311,17 +321,28 @@ function bindEvents() {
   });
   $('add-delete').addEventListener('click', deleteSheetExpense);
   $('balance-cancel').addEventListener('click', () => closeSheet($('balance-sheet')));
+  $('balance-mode').addEventListener('click', (e) => {
+    const b = e.target.closest('button');
+    if (!b || b.dataset.mode === balanceMode) return;
+    balanceMode = b.dataset.mode;
+    renderBalanceSheet();
+  });
   $('balance-save').addEventListener('click', async () => {
-    const balances = {};
+    const values = {};
     for (const cur of ['USD', 'TRY', 'RUB', 'EUR']) {
       const value = parseMoneyInput($(`balance-${cur}`).value);
       if (!isFinite(value) || value < 0) { toast('Введите суммы от 0'); return; }
-      balances[cur] = value;
+      values[cur] = value;
     }
-    await saveBalances(balances);
+    if (balanceMode === 'manual') {
+      await saveWallet({ manualRemaining: values, remainingMode: 'manual' });
+      toast('Остаток сохранён');
+    } else {
+      await saveWallet({ balances: values, remainingMode: 'auto' });
+      toast('Исходные суммы сохранены');
+    }
     closeSheet($('balance-sheet'));
     renderHome();
-    toast('Исходные суммы сохранены');
   });
 
   $('keypad').addEventListener('click', (e) => {
