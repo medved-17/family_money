@@ -121,7 +121,7 @@ export function exportPdf(expenses, period) {
       const d = new Date(e.spentAt);
       const cat = categoryById(e.category);
       const label = e.note ? `${cat.name} · ${e.note}` : cat.name;
-      const amt = `${fmtNum(e.amount)}${e.tips ? `+${fmtNum(e.tips)}` : ''} ${CUR_SYMBOL[e.currency]}`;
+      const amt = `${fmtNum(e.amount)}${e.tips ? `−${fmtNum(e.tips)}` : ''} ${CUR_SYMBOL[e.currency]}`;
       p.row([
         d.toLocaleDateString('ru-RU', { day: '2-digit', month: '2-digit', year: '2-digit' }),
         AUTHORS[e.author]?.name || '',

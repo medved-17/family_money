@@ -169,7 +169,7 @@ function txRowHTML(e, swipeDelete = false) {
   const inBase = e.currency !== base()
     ? `<div class="tx-base">≈ ${nMoney(round2(toBase(e, base())), base())}</div>` : '';
   const tips = e.tips > 0
-    ? `<div class="tx-tips">🤝 +${nNum(e.tips)} ${CUR_SYMBOL[e.currency]}</div>` : '';
+    ? `<div class="tx-tips">🤝 −${nNum(e.tips)} ${CUR_SYMBOL[e.currency]}</div>` : '';
   const row = `
   <button class="tx-row" data-tx="${e.id}">
     <span class="tx-emoji" style="background:${cat.color}22">${cat.emoji}
