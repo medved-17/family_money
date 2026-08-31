@@ -7,6 +7,14 @@ import { state, mergeRemote, setSyncHook, notify } from './store.js';
 
 const LS_CFG = 'fm-firebase-config';
 const LS_CRED = 'fm-firebase-cred';
+const DEFAULT_CFG = {
+  apiKey: 'AIzaSyCJPCaQNtfyNWOUBsAnYFpXlx6kqCIEDhM',
+  authDomain: 'family-money-9af01.firebaseapp.com',
+  projectId: 'family-money-9af01',
+  storageBucket: 'family-money-9af01.firebasestorage.app',
+  messagingSenderId: '854158404568',
+  appId: '1:854158404568:web:2618ac0444f124c37020ad',
+};
 
 export const syncState = {
   configured: false,
@@ -20,13 +28,14 @@ let pushTimer = null;
 let started = false;
 
 export function getConfig() {
-  try { return JSON.parse(localStorage.getItem(LS_CFG) || 'null'); } catch { return null; }
+  try { return JSON.parse(localStorage.getItem(LS_CFG) || 'null') || DEFAULT_CFG; } catch { return DEFAULT_CFG; }
 }
+export function hasCustomConfig() { return !!localStorage.getItem(LS_CFG); }
 export function saveConfig(cfg) { localStorage.setItem(LS_CFG, JSON.stringify(cfg)); }
 export function clearConfig() {
   localStorage.removeItem(LS_CFG);
   localStorage.removeItem(LS_CRED);
-  syncState.configured = false;
+  syncState.configured = true;
   syncState.connected = false;
   notify('sync');
 }

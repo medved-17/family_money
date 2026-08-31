@@ -7,7 +7,7 @@ import {
 import { db } from './db.js';
 import { AUTHORS, CUR_SYMBOL, CURRENCIES, fmtNum, escapeHtml, toast, downloadBlob } from './util.js';
 import { getCachedRates, getCustomRate, getCustomRateList, rateToBase } from './rates.js';
-import { syncState, getConfig, saveConfig, clearConfig, signIn, getCred } from './sync.js';
+import { syncState, getConfig, hasCustomConfig, saveConfig, clearConfig, signIn, getCred } from './sync.js';
 import { I } from './icons.js';
 import { showPicker, openSheet, closeSheet } from './picker.js';
 
@@ -130,11 +130,11 @@ export function renderSettings() {
           <span class="set-row-label">${syncState.connected ? 'Подключена' : syncState.configured ? 'Настроена, нужен вход' : 'Не настроена'}
             <span class="set-row-sub">${syncState.connected
               ? (syncState.lastSyncAt ? 'Обновлено ' + syncState.lastSyncAt.toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' }) : 'Ожидание данных…')
-              : syncState.error || 'Работает через бесплатный Firebase — см. инструкцию в репозитории'}</span></span>
+              : syncState.error || 'Firebase уже встроен — осталось войти в общий аккаунт'}</span></span>
         </div>
         <button class="set-row" id="set-sync-config">
           <span class="set-row-ico">${I.cloud}</span>
-          <span class="set-row-label">${getConfig() ? 'Изменить конфиг Firebase' : 'Вставить конфиг Firebase'}</span>
+          <span class="set-row-label">${hasCustomConfig() ? 'Изменить конфиг Firebase' : 'Конфиг Firebase встроен'}</span>
           <span class="set-row-chev">${I.fwd}</span>
         </button>
         ${getConfig() && !syncState.connected ? `
@@ -281,7 +281,12 @@ function bindSettings() {
       getConfig() ? JSON.stringify(getConfig()) : '');
     if (!raw) return;
     try {
-      const cfg = JSON.parse(raw);
+      const match = raw.match(/firebaseConfig\s*=\s*({[\s\S]*?});?/) || raw.match(/({[\s\S]*})/);
+      const json = (match ? match[1] : raw)
+        .replace(/([{,]\s*)([A-Za-z_$][\w$]*)\s*:/g, '$1"$2":')
+        .replace(/'/g, '"')
+        .replace(/,\s*}/g, '}');
+      const cfg = JSON.parse(json);
       if (!cfg.apiKey || !cfg.projectId) throw new Error();
       saveConfig(cfg);
       toast('Конфиг сохранён. Теперь войдите в аккаунт.');
