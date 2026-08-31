@@ -499,7 +499,9 @@ button svg, .set-row-ico svg { width: 20px; height: 20px; }
 .sheet-head h2 { font-size: 16px; font-weight: 700; text-align: center; }
 .sheet-cancel { color: var(--ink-2); font-size: 14.5px; font-weight: 600; text-align: left; }
 .sheet-danger { color: var(--danger); font-size: 14.5px; font-weight: 600; text-align: right; }
-.sheet-scroll { overflow-y: auto; padding: 4px 18px 8px; flex: 1; }
+/* верхняя часть листа статична: без прокрутки и скроллбаров */
+.sheet-scroll { overflow: hidden; padding: 4px 18px 8px; flex: none; }
+.no-scroll { overflow: hidden; }
 
 /* Сумма + чаевые */
 .amount-row { display: flex; gap: 10px; margin-bottom: 12px; }
@@ -543,10 +545,12 @@ button svg, .set-row-ico svg { width: 20px; height: 20px; }
 /* Категории в листе */
 .cat-scroller {
   display: grid; grid-auto-flow: column; grid-template-rows: repeat(2, auto);
-  grid-auto-columns: 78px; gap: 8px; overflow-x: auto; padding: 2px 2px 6px;
-  margin-bottom: 12px; scrollbar-width: none; -webkit-overflow-scrolling: touch;
+  grid-auto-columns: 78px; gap: 8px; overflow-x: auto; overflow-y: hidden;
+  padding: 2px 2px 6px; margin-bottom: 12px;
+  scrollbar-width: none; -webkit-overflow-scrolling: touch;
+  overscroll-behavior-x: contain; touch-action: pan-x;
 }
-.cat-scroller::-webkit-scrollbar { display: none; }
+.cat-scroller::-webkit-scrollbar { display: none; width: 0; height: 0; }
 .cat-cell {
   display: flex; flex-direction: column; align-items: center; gap: 5px;
   padding: 10px 2px 8px; border-radius: 15px; background: var(--card);
@@ -700,3 +704,14 @@ body, .card, .set-card, .day-card, .stat-tile, .tabbar, .sheet,
 .rate-add .rate-period-value::placeholder { color: var(--ink-3); font-weight: 500; }
 .rate-add-btn { padding: 10px 14px; font-size: 13.5px; box-shadow: none; flex: none; }
 .rates-hint { font-size: 12px; color: var(--ink-2); padding: 12px 2px 4px; line-height: 1.5; }
+
+/* ═══ Компактный лист на невысоких экранах (iPhone SE и т.п.) ═══ */
+@media (max-height: 800px) {
+  .keypad button { height: 46px; font-size: 21px; }
+  .amount-value { font-size: 26px; }
+  .amount-value-tips { font-size: 19px; }
+  .cat-scroller { grid-template-rows: repeat(1, auto); }
+  .cat-cell { padding: 8px 2px 6px; }
+  .btn-save { padding: 13px; }
+  .sheet-scroll { padding-bottom: 4px; }
+}

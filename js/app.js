@@ -12,7 +12,7 @@ import { renderSettings } from './settings.js';
 import { exportXlsx, exportPdf } from './export.js';
 import { toast, periodTitle, CUR_SYMBOL, CURRENCIES } from './util.js';
 import { I } from './icons.js';
-import { showPicker, openSheet, closeSheet, closeAllSheets, initPicker } from './picker.js';
+import { showPicker, openSheet, closeSheet, closeAllSheets, initPicker, makeDraggable } from './picker.js';
 import { getCustomRate } from './rates.js';
 
 const $ = id => document.getElementById(id);
@@ -187,6 +187,10 @@ function bindEvents() {
   // ─── лист добавления ───
   $('fab-add').addEventListener('click', () => openAddSheet());
   $('add-cancel').addEventListener('click', closeAddSheet);
+  // свайп вниз закрывает шторки
+  makeDraggable($('add-sheet'), closeAddSheet);
+  makeDraggable($('export-sheet'), () => closeSheet($('export-sheet')));
+  makeDraggable($('rates-sheet'), () => closeSheet($('rates-sheet')));
   $('sheet-backdrop').addEventListener('click', () => {
     sheet.open = false;
     closeAllSheets();
