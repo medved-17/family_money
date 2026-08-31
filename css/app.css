@@ -586,8 +586,14 @@ button svg, .set-row-ico svg { width: 20px; height: 20px; }
 .sheet-head h2 { font-size: 16px; font-weight: 700; text-align: center; }
 .sheet-cancel { color: var(--ink-2); font-size: 14.5px; font-weight: 600; text-align: left; }
 .sheet-danger { color: var(--danger); font-size: 14.5px; font-weight: 600; text-align: right; }
-/* верхняя часть листа статична: без прокрутки и скроллбаров */
-.sheet-scroll { overflow: hidden; padding: 4px 18px 8px; flex: none; }
+/* верхняя часть листа: сжимается и прокручивается, если не влезает,
+   чтобы клавиатура и кнопка «Сохранить» всегда оставались на экране */
+.sheet-scroll {
+  padding: 4px 18px 8px; flex: 0 1 auto; min-height: 0;
+  overflow-y: auto; overscroll-behavior: contain;
+  scrollbar-width: none; -webkit-overflow-scrolling: touch;
+}
+.sheet-scroll::-webkit-scrollbar { display: none; }
 .no-scroll { overflow: hidden; }
 
 /* Сумма + чаевые */
@@ -673,7 +679,7 @@ button svg, .set-row-ico svg { width: 20px; height: 20px; }
   border: 1px solid var(--hairline);
   border-radius: 16px;
   padding: 11px 14px;
-  font-size: 14px;
+  font-size: 16px;
   line-height: 1.35;
   outline: none;
   min-width: 0;
