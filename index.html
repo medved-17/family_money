@@ -237,20 +237,22 @@
       <button class="chip" data-cur="RUB">₽ RUB</button>
     </div>
 
-    <!-- Категории -->
-    <div class="cat-scroller" id="cat-picker"></div>
-
-    <!-- Комментарий и дата -->
-    <label class="note-field">
-      <span class="note-label">Комментарий</span>
-      <textarea id="add-note" class="note-input" placeholder="Например: кофе у дома" maxlength="160" rows="2"></textarea>
-    </label>
+    <!-- Дата (можно задним числом) — сразу на виду -->
     <div class="meta-row">
       <label class="date-chip">
         <span id="add-date-text">Сейчас</span>
         <input type="datetime-local" id="add-date">
       </label>
     </div>
+
+    <!-- Категории -->
+    <div class="cat-scroller" id="cat-picker"></div>
+
+    <!-- Комментарий -->
+    <label class="note-field">
+      <span class="note-label">Комментарий</span>
+      <textarea id="add-note" class="note-input" placeholder="Например: кофе у дома" maxlength="160" rows="2"></textarea>
+    </label>
     <div class="rate-line hidden" id="rate-line">
       <span id="rate-text"></span>
       <button class="link-btn" id="rate-edit">Изменить</button>

@@ -1,7 +1,7 @@
 // Экран настроек
 
 import {
-  state, saveFamilySettings, setProfile, setPassword, checkPassword,
+  state, saveFamilySettings, setProfile,
   visibleExpenses, addCategory, updateCategory, backupJSON, restoreBackup, saveBalances,
 } from './store.js';
 import { db } from './db.js';
@@ -165,11 +165,6 @@ export function renderSettings() {
           <span class="set-row-label">Восстановить из копии</span>
           <span class="set-row-chev">${I.fwd}</span>
           <input type="file" id="set-restore-file" accept=".json,application/json" style="position:absolute;inset:0;opacity:0;width:100%">
-        </button>
-        <button class="set-row" id="set-change-pass">
-          <span class="set-row-ico">${I.lock}</span>
-          <span class="set-row-label">Сменить пароль</span>
-          <span class="set-row-chev">${I.fwd}</span>
         </button>
       </div>
     </div>
@@ -339,16 +334,6 @@ function bindSettings() {
       toast(err.message || 'Не удалось прочитать файл');
     }
     e.target.value = '';
-  };
-
-  $('set-change-pass').onclick = async () => {
-    const old = prompt('Текущий пароль:');
-    if (old === null) return;
-    if (!(await checkPassword(old))) { toast('Неверный текущий пароль'); return; }
-    const next = prompt('Новый пароль (минимум 4 символа):');
-    if (!next || next.length < 4) { toast('Слишком короткий пароль'); return; }
-    await setPassword(next);
-    toast('Пароль изменён. Введите его на втором телефоне при следующем входе.');
   };
 
   $('set-logout').onclick = async () => {

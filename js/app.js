@@ -1,6 +1,6 @@
 // Точка входа: онбординг, навигация, привязка событий
 
-import { initStore, state, subscribe, setPassword, checkPassword, setUnlocked, setProfile, addCategory, saveSettings, saveBalances, saveWallet, deleteExpense } from './store.js';
+import { initStore, state, subscribe, checkSharedPassword, setUnlocked, setProfile, addCategory, saveSettings, saveBalances, saveWallet, deleteExpense } from './store.js';
 import { refreshRates } from './rates.js';
 import { initSync, syncState } from './sync.js';
 import {
@@ -154,21 +154,15 @@ async function runOnboarding() {
   $('app').classList.add('hidden');
 
   if (needPassword) {
-    const creating = !state.settings.passwordHash;
-    $('ob-password-label').textContent = creating ? 'Придумайте пароль общего аккаунта' : 'Пароль общего аккаунта';
-    $('ob-password-hint').textContent = creating
-      ? 'Один пароль на двоих — его нужно будет ввести один раз на каждом телефоне.'
-      : 'Введите пароль, который вы придумали при первой настройке.';
-    $('ob-password-btn').textContent = creating ? 'Создать аккаунт' : 'Войти';
+    $('ob-password-label').textContent = 'Пароль';
+    $('ob-password-hint').textContent = 'Общий пароль на двоих. Введите его, чтобы войти.';
+    $('ob-password-btn').textContent = 'Войти';
 
     await new Promise(resolve => {
       $('ob-password-form').onsubmit = async (e) => {
         e.preventDefault();
         const value = $('ob-password-input').value;
-        if (creating) {
-          if (value.length < 4) return;
-          await setPassword(value);
-        } else if (!(await checkPassword(value))) {
+        if (!(await checkSharedPassword(value))) {
           $('ob-password-error').classList.remove('hidden');
           return;
         }
