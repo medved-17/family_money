@@ -5,7 +5,7 @@ import {
   addExpense, updateExpense, deleteExpense, saveSettings, addExchange, isExchange,
 } from './store.js';
 import {
-  fmtNum, fmtMoney, fmtDay, fmtTime, periodTitle, CUR_SYMBOL, CURRENCIES, AUTHORS,
+  fmtNum, fmtMoney, fmtDay, fmtDateShort, fmtTime, periodTitle, CUR_SYMBOL, CURRENCIES, AUTHORS,
   escapeHtml, toLocalInput, toast, round2,
 } from './util.js';
 import { toBase, tipsToBase, rateToBase, getCachedRates, getCustomRate } from './rates.js';
@@ -57,32 +57,27 @@ function convertMoney(amount, from, to) {
 
 function walletSummary() {
   const balances = state.settings.balances || {};
-  const manual = state.settings.remainingMode === 'manual';
+  const asOf = state.settings.balanceAsOf || null;   // ISO или null («с самого начала»)
   const spent = { USD: 0, TRY: 0, RUB: 0, EUR: 0 };
   const remaining = {};
+  for (const cur of ['USD', 'TRY', 'RUB', 'EUR']) remaining[cur] = Number(balances[cur]) || 0;
 
-  if (manual) {
-    // ручной режим: остаток — ровно то, что ввёл пользователь
-    const mr = state.settings.manualRemaining || {};
-    for (const cur of ['USD', 'TRY', 'RUB', 'EUR']) remaining[cur] = Number(mr[cur]) || 0;
-  } else {
-    for (const cur of ['USD', 'TRY', 'RUB', 'EUR']) remaining[cur] = Number(balances[cur]) || 0;
-    for (const e of visibleExpenses()) {
-      if (isExchange(e)) {
-        // обмен переносит деньги между валютами, не меняя общий итог
-        remaining[e.fromCur] = (remaining[e.fromCur] || 0) - (e.fromAmount || 0);
-        remaining[e.toCur] = (remaining[e.toCur] || 0) + (e.toAmount || 0);
-      } else {
-        const s = (e.amount || 0) + (e.tips || 0);
-        spent[e.currency] = (spent[e.currency] || 0) + s;
-        remaining[e.currency] = (remaining[e.currency] || 0) - s;
-      }
+  for (const e of visibleExpenses()) {
+    // траты и обмены ДО (и на) даты остатка уже учтены в введённой сумме — пропускаем
+    if (asOf && (e.spentAt || '') <= asOf) continue;
+    if (isExchange(e)) {
+      remaining[e.fromCur] = (remaining[e.fromCur] || 0) - (e.fromAmount || 0);
+      remaining[e.toCur] = (remaining[e.toCur] || 0) + (e.toAmount || 0);
+    } else {
+      const s = (e.amount || 0) + (e.tips || 0);
+      spent[e.currency] = (spent[e.currency] || 0) + s;
+      remaining[e.currency] = (remaining[e.currency] || 0) - s;
     }
   }
   // общий остаток — сумма всех валют, пересчитанная в рубли (доллары/лиры/евро отдельно)
   const totalRUB = Object.entries(remaining)
     .reduce((sum, [cur, value]) => sum + convertMoney(value, cur, 'RUB'), 0);
-  return { balances, manual, spent, remaining, totalRUB };
+  return { balances, asOf, spent, remaining, totalRUB };
 }
 
 // ─────────────── ГЛАВНАЯ ───────────────
@@ -169,10 +164,12 @@ export function renderHome() {
   // ─── Остаток: рубли — общий итог, доллары/лиры/евро — по отдельности ───
   const wallet = walletSummary();
   $('home-remaining-total').innerHTML = heroMoneyHTML(wallet.totalRUB, 'RUB');
-  const hasValues = Object.values(wallet.remaining).some(v => Math.abs(Number(v)) > 0.005);
-  $('home-remaining-line').textContent = wallet.manual
-    ? (hasValues ? 'введено вручную' : 'введите остаток вручную (карандаш)')
-    : (hasValues ? 'после всех трат и обменов' : 'введите запасы валют в настройках');
+  const hasValues = Object.values(wallet.balances).some(v => Math.abs(Number(v)) > 0.005);
+  $('home-remaining-line').textContent = !hasValues
+    ? 'укажите остаток на дату (карандаш)'
+    : wallet.asOf
+      ? `остаток на ${fmtDateShort(new Date(wallet.asOf))} минус траты после`
+      : 'после всех записанных трат';
   const hidden = state.settings.hiddenCurrencies || [];
   const pillCurs = ['USD', 'TRY', 'EUR'].filter(cur =>
     !hidden.includes(cur) || Math.abs(wallet.remaining[cur] || 0) > 0.005 || Number(wallet.balances[cur]) > 0);

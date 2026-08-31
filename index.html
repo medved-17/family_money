@@ -108,7 +108,7 @@
           <span class="total-label">Осталось всего</span>
           <div class="total-amount" id="home-remaining-total">0 ₽</div>
           <div class="total-tips" id="home-remaining-line"></div>
-          <div class="remaining-hint" id="home-remaining-hint">Итог — сумма всех валют, пересчитанная в рубли по вашему курсу. Доллары, лиры и евро показаны отдельно, без пересчёта.</div>
+          <div class="remaining-hint" id="home-remaining-hint">Укажите остаток на дату (карандаш) — дальше вычитаем траты и обмены после неё. Доллары, лиры и евро показаны отдельно, а рубли — общий итог всех валют по вашему курсу.</div>
           <div class="remaining-pills" id="home-remaining-pills"></div>
         </section>
       </div>
@@ -267,19 +267,22 @@
   <button class="btn btn-primary btn-save" id="add-save">Сохранить</button>
 </div>
 
-<!-- ══════════ ЛИСТ ИСХОДНЫХ СУММ / ОСТАТКА ══════════ -->
-<div id="balance-sheet" class="sheet sheet-auto hidden" role="dialog" aria-label="Суммы">
+<!-- ══════════ ЛИСТ ОСТАТКА НА ДАТУ ══════════ -->
+<div id="balance-sheet" class="sheet sheet-auto hidden" role="dialog" aria-label="Остаток на дату">
   <div class="sheet-grip"></div>
   <header class="sheet-head">
     <button class="sheet-cancel" id="balance-cancel">Закрыть</button>
-    <h2 id="balance-title">Суммы</h2><span></span>
+    <h2 id="balance-title">Остаток на дату</h2><span></span>
   </header>
   <div class="balance-body">
-    <div class="seg" id="balance-mode">
-      <button data-mode="auto" class="on">По тратам</button>
-      <button data-mode="manual">Вручную</button>
-    </div>
-    <p class="balance-hint" id="balance-hint"></p>
+    <label class="balance-date-field">
+      <span class="balance-date-label">На какую дату</span>
+      <span class="date-chip balance-date-chip">
+        <span id="balance-date-text">Сейчас</span>
+        <input type="datetime-local" id="balance-date">
+      </span>
+    </label>
+    <p class="balance-hint" id="balance-hint">Сколько осталось в каждой валюте на эту дату. Траты и обмены после неё вычтем сами.</p>
     <div class="balance-grid">
       <label class="balance-input">
         <span>$ USD</span>
