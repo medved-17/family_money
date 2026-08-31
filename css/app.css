@@ -914,3 +914,7 @@ body, .card, .set-card, .day-card, .stat-tile, .tabbar, .sheet,
 .tx-emoji-exchange { background: rgba(94, 158, 207, .18); }
 .tx-exchange-from { color: var(--ink); font-size: 14px; font-weight: 700; white-space: nowrap; }
 .tx-exchange-to { color: #4F7565; font-size: 12.5px; font-weight: 700; white-space: nowrap; margin-top: 1px; }
+
+/* Пояснение и режимы в листе сумм/остатка */
+.balance-body .seg { margin-bottom: 0; }
+.balance-hint { font-size: 12.5px; line-height: 1.45; color: var(--ink-2); margin: -4px 2px 0; }

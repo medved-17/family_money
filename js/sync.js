@@ -170,6 +170,8 @@ async function pushAll() {
     if (dirtyWallet) {
       await fs.setDoc(fs.doc(dbi, 'spaces', uid, 'wallet', 'balances'), sanitize({
         balances: state.settings.balances || {},
+        remainingMode: state.settings.remainingMode || 'auto',
+        manualRemaining: state.settings.manualRemaining || {},
         updatedAt: state.settings.balancesUpdatedAt,
       }));
     }
