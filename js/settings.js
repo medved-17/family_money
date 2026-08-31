@@ -5,8 +5,8 @@ import {
   visibleExpenses, addCategory, updateCategory, backupJSON, restoreBackup,
 } from './store.js';
 import { db } from './db.js';
-import { AUTHORS, CUR_SYMBOL, escapeHtml, toast, downloadBlob } from './util.js';
-import { getCachedRates, refreshRates } from './rates.js';
+import { AUTHORS, CUR_SYMBOL, CURRENCIES, fmtNum, escapeHtml, toast, downloadBlob } from './util.js';
+import { getCachedRates, refreshRates, getCustomRate, rateToBase } from './rates.js';
 import { syncState, getConfig, saveConfig, clearConfig, signIn, getCred } from './sync.js';
 import { I } from './icons.js';
 
@@ -67,10 +67,36 @@ export function renderSettings() {
         </label>
         <button class="set-row" id="set-refresh-rates">
           <span class="set-row-ico">${I.refresh}</span>
-          <span class="set-row-label">Обновить курсы
+          <span class="set-row-label">Обновить рыночные курсы
             <span class="set-row-sub">Загружены: ${ratesAge}</span></span>
           <span class="set-row-chev">${I.fwd}</span>
         </button>
+      </div>
+    </div>
+
+    <div class="set-group">
+      <div class="set-group-title">Валюты и курсы</div>
+      <div class="set-card">
+        ${CURRENCIES.filter(c => c !== s.baseCurrency).map(cur => {
+          const hidden = (s.hiddenCurrencies || []).includes(cur);
+          const custom = getCustomRate(cur, s.baseCurrency);
+          const market = rateToBase(getCachedRates().perUSD, cur, s.baseCurrency);
+          const sub = custom
+            ? `Свой курс: 1 ${CUR_SYMBOL[cur]} = ${fmtNum(custom, 4)} ${CUR_SYMBOL[s.baseCurrency]}`
+            : `Рыночный: 1 ${CUR_SYMBOL[cur]} ≈ ${fmtNum(market, 4)} ${CUR_SYMBOL[s.baseCurrency]}`;
+          return `
+          <div class="cat-manage-row">
+            <span class="cat-bar-emoji num" style="background:var(--accent-soft);color:var(--accent);font-size:15px;font-weight:700">${CUR_SYMBOL[cur]}</span>
+            <span class="cat-manage-name"><span class="${hidden ? 'struck' : ''}">${cur}</span>
+              <span class="set-row-sub num">${hidden ? 'Выключена' : sub}</span></span>
+            <button class="cat-manage-act" data-cur-rate="${cur}" title="Свой курс">${I.pencil}</button>
+            <button class="cat-manage-act" data-cur-hide="${cur}">${hidden ? 'Включить' : 'Выключить'}</button>
+          </div>`;
+        }).join('')}
+        <div class="set-row" style="pointer-events:none">
+          <span class="set-row-ico">${I.spark}</span>
+          <span class="set-row-sub" style="flex:1">Свой курс — по которому вы реально покупали валюту: он важнее рыночного. Выключенная валюта не показывается при добавлении траты.</span>
+        </div>
       </div>
     </div>
 
@@ -180,10 +206,45 @@ function bindSettings() {
   };
 
   $('set-base-cur').onchange = async (e) => {
-    await saveSettings({ baseCurrency: e.target.value });
+    const next = e.target.value;
+    // базовую валюту нельзя держать выключенной
+    const hiddenCurrencies = (state.settings.hiddenCurrencies || []).filter(c => c !== next);
+    await saveSettings({ baseCurrency: next, hiddenCurrencies });
     renderSettings();
-    toast(`Базовая валюта: ${e.target.value}`);
+    toast(`Базовая валюта: ${next}`);
   };
+
+  // свой курс валюты («доллар покупали по 82»)
+  document.querySelectorAll('[data-cur-rate]').forEach(b => b.onclick = async () => {
+    const cur = b.dataset.curRate;
+    const bse = state.settings.baseCurrency;
+    const current = getCustomRate(cur, bse);
+    const raw = prompt(
+      `1 ${cur} = ? ${bse}\n\nПустое поле — вернуть рыночный курс.`,
+      current ? String(current).replace('.', ',') : '');
+    if (raw === null) return;
+    const customRates = { ...(state.settings.customRates || {}) };
+    const v = parseFloat(raw.replace(',', '.').replace(/\s/g, ''));
+    if (raw.trim() === '' || !isFinite(v) || v <= 0) {
+      delete customRates[cur];
+      await saveSettings({ customRates });
+      toast(`${cur}: рыночный курс`);
+    } else {
+      customRates[cur] = { base: bse, value: v };
+      await saveSettings({ customRates });
+      toast(`Свой курс: 1 ${CUR_SYMBOL[cur]} = ${fmtNum(v, 4)} ${CUR_SYMBOL[bse]}`);
+    }
+    renderSettings();
+  });
+
+  // выключение валюты
+  document.querySelectorAll('[data-cur-hide]').forEach(b => b.onclick = async () => {
+    const cur = b.dataset.curHide;
+    const list = new Set(state.settings.hiddenCurrencies || []);
+    list.has(cur) ? list.delete(cur) : list.add(cur);
+    await saveSettings({ hiddenCurrencies: [...list] });
+    renderSettings();
+  });
 
   $('set-theme').onchange = (e) => {
     applyTheme(e.target.value);

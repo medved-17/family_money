@@ -243,6 +243,18 @@ function fillCategoryFilter() {
   sel.value = cur;
 }
 
+// фильтр валют: выключенные не показываем, если по ним нет операций
+function fillCurrencyFilter() {
+  const sel = $('f-cur');
+  const cur = sel.value;
+  const hidden = state.settings.hiddenCurrencies || [];
+  const used = new Set(state.expenses.filter(e => !e.deleted).map(e => e.currency));
+  const list = ['EUR', 'USD', 'TRY', 'RUB'].filter(c => !hidden.includes(c) || used.has(c));
+  sel.innerHTML = '<option value="">Все валюты</option>' +
+    list.map(c => `<option value="${c}">${c}</option>`).join('');
+  sel.value = list.includes(cur) ? cur : '';
+}
+
 function updateSyncIcon() {
   $('sync-icon').innerHTML = syncState.connected ? I.cloudCheck : I.cloudOff;
   $('home-sync-badge').style.color = syncState.connected ? 'var(--ok)' : '';
@@ -257,10 +269,12 @@ async function main() {
 
   $('app').classList.remove('hidden');
   fillCategoryFilter();
+  fillCurrencyFilter();
   showScreen('home');
 
   subscribe((what) => {
     if (what === 'categories') fillCategoryFilter();
+    if (what === 'settings' || what === 'expenses') fillCurrencyFilter();
     if (what === 'sync') { updateSyncIcon(); if (currentScreen === 'settings') renderSettings(); return; }
     render(currentScreen);
   });

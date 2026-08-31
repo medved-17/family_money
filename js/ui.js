@@ -8,7 +8,7 @@ import {
   fmtNum, fmtMoney, fmtDay, fmtTime, periodTitle, CUR_SYMBOL, AUTHORS,
   escapeHtml, toLocalInput, toast, round2,
 } from './util.js';
-import { toBase, tipsToBase, rateToBase, getCachedRates } from './rates.js';
+import { toBase, tipsToBase, rateToBase, getCachedRates, getCustomRate } from './rates.js';
 import { inPeriod, summarize, series } from './agg.js';
 import { donutChart, barChart } from './charts.js';
 
@@ -333,7 +333,10 @@ export function openAddSheet(expense = null) {
   sheet.target = 'amount';
   sheet.amountStr = expense ? numToStr(expense.amount) : '';
   sheet.tipsStr = expense && expense.tips ? numToStr(expense.tips) : '';
-  sheet.currency = expense ? expense.currency : (state.settings.lastCurrency || 'RUB');
+  const hiddenCur = state.settings.hiddenCurrencies || [];
+  const last = state.settings.lastCurrency || 'RUB';
+  sheet.currency = expense ? expense.currency
+    : (hiddenCur.includes(last) ? state.settings.baseCurrency : last);
   sheet.categoryId = expense ? expense.category : null;
   sheet.note = expense ? expense.note : '';
   sheet.spentAt = expense ? new Date(expense.spentAt) : null;
@@ -375,9 +378,12 @@ export function renderSheet() {
   $('amount-box').classList.toggle('on', sheet.target === 'amount');
   $('tips-box').classList.toggle('on', sheet.target === 'tips');
 
-  // валюты
-  $('currency-row').querySelectorAll('.chip').forEach(c =>
-    c.classList.toggle('on', c.dataset.cur === sheet.currency));
+  // валюты (выключенные — не показываем, кроме валюты редактируемой операции)
+  const hiddenCur = state.settings.hiddenCurrencies || [];
+  $('currency-row').querySelectorAll('.chip').forEach(c => {
+    c.classList.toggle('on', c.dataset.cur === sheet.currency);
+    c.style.display = hiddenCur.includes(c.dataset.cur) && c.dataset.cur !== sheet.currency ? 'none' : '';
+  });
 
   // категории (частые — первыми)
   const cats = categoriesByUsage();
@@ -392,14 +398,20 @@ export function renderSheet() {
   const d = sheet.spentAt;
   $('add-date-text').textContent = d ? `${fmtDay(d)} ${fmtTime(d)}` : 'Сейчас';
 
-  // строка курса
+  // строка курса: ручной → свой курс семьи → рыночный
   const b = base();
   if (sheet.currency !== b) {
-    const rate = sheet.manualRate && sheet.manualRate.base === b
-      ? sheet.manualRate.value
-      : rateToBase(sheet.editRates || getCachedRates().perUSD, sheet.currency, b);
+    const custom = getCustomRate(sheet.currency, b);
+    let rate, label = '';
+    if (sheet.manualRate && sheet.manualRate.base === b) {
+      rate = sheet.manualRate.value; label = ' (вручную)';
+    } else if (custom) {
+      rate = custom; label = ' (свой курс)';
+    } else {
+      rate = rateToBase(sheet.editRates || getCachedRates().perUSD, sheet.currency, b);
+    }
     $('rate-text').textContent =
-      `Курс: 1 ${CUR_SYMBOL[sheet.currency]} ≈ ${fmtNum(rate)} ${CUR_SYMBOL[b]}${sheet.manualRate ? ' (вручную)' : ''}`;
+      `Курс: 1 ${CUR_SYMBOL[sheet.currency]} = ${fmtNum(rate, 4)} ${CUR_SYMBOL[b]}${label}`;
     $('rate-line').classList.remove('hidden');
   } else {
     $('rate-line').classList.add('hidden');

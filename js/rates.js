@@ -50,18 +50,27 @@ export function rateToBase(snapshot, cur, base) {
   return (perUSD[base] || 1) / (perUSD[cur] || 1);
 }
 
-// Сумма операции в базовой валюте (учитывает ручной курс)
-export function toBase(expense, base) {
-  const amt = (expense.amount || 0) + (expense.tips || 0);
-  return convert(expense, amt, base);
+// ─── Свои фиксированные курсы семьи («доллар покупали по 82») ───
+// { USD: { base: 'RUB', value: 82 }, ... } — подставляется из настроек store.js
+let customRates = {};
+export function setCustomRates(obj) { customRates = obj || {}; }
+export function getCustomRate(cur, base) {
+  const c = customRates[cur];
+  return c && c.base === base && c.value > 0 ? c.value : null;
 }
-export function amountToBase(expense, base) { return convert(expense, expense.amount || 0, base); }
-export function tipsToBase(expense, base) { return convert(expense, expense.tips || 0, base); }
 
-function convert(expense, amt, base) {
-  if (expense.currency === base) return amt;
-  if (expense.manualRate && expense.manualRate.base === base) {
-    return amt * expense.manualRate.value;
-  }
-  return amt * rateToBase(expense.rates, expense.currency, base);
+// Итоговый курс операции: ручной у операции → свой курс семьи → рыночный снимок
+export function effectiveRate(expense, base) {
+  if (expense.currency === base) return 1;
+  if (expense.manualRate && expense.manualRate.base === base) return expense.manualRate.value;
+  const custom = getCustomRate(expense.currency, base);
+  if (custom) return custom;
+  return rateToBase(expense.rates, expense.currency, base);
 }
+
+// Сумма операции в базовой валюте
+export function toBase(expense, base) {
+  return ((expense.amount || 0) + (expense.tips || 0)) * effectiveRate(expense, base);
+}
+export function amountToBase(expense, base) { return (expense.amount || 0) * effectiveRate(expense, base); }
+export function tipsToBase(expense, base) { return (expense.tips || 0) * effectiveRate(expense, base); }

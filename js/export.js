@@ -1,7 +1,7 @@
 // Экспорт: Excel (.xlsx) и PDF-отчёт за выбранный период
 
 import { state, categoryById } from './store.js';
-import { toBase, tipsToBase, rateToBase } from './rates.js';
+import { toBase, tipsToBase, effectiveRate } from './rates.js';
 import { summarize } from './agg.js';
 import { buildXlsx, S } from './xlsx.js';
 import { ReportPainter, buildPdfFromCanvases } from './pdf.js';
@@ -22,8 +22,7 @@ export function exportXlsx(expenses, period) {
      `Курс к ${b}`, `Сумма в ${b}`].map(v => ({ v, style: S.HEAD })),
     ...sorted.map(e => {
       const d = new Date(e.spentAt);
-      const rate = e.currency === b ? 1
-        : (e.manualRate && e.manualRate.base === b ? e.manualRate.value : rateToBase(e.rates, e.currency, b));
+      const rate = effectiveRate(e, b);
       return [
         d.toLocaleDateString('ru-RU'),
         d.toTimeString().slice(0, 5),

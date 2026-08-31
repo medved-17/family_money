@@ -2,7 +2,7 @@
 
 import { db } from './db.js';
 import { uuid, sha256 } from './util.js';
-import { currentSnapshot } from './rates.js';
+import { currentSnapshot, setCustomRates } from './rates.js';
 
 export const DEFAULT_CATEGORIES = [
   { id: 'food',      name: 'Еда и рестораны', emoji: '🍽️', color: '#DFA036' },
@@ -27,6 +27,14 @@ export const state = {
     lastCurrency: 'RUB',
     passwordHash: null,
     passwordSalt: null,
+    // свои курсы семьи: доллар покупали по 82 ₽, евро 105 ₽, лира из 47 ₺/$
+    customRates: {
+      USD: { base: 'RUB', value: 82 },
+      EUR: { base: 'RUB', value: 105 },
+      TRY: { base: 'RUB', value: 1.7447 },
+    },
+    // выключенные валюты не показываются при добавлении траты (евро включается в настройках)
+    hiddenCurrencies: ['EUR'],
   },
   profile: null,       // 'sonya' | 'nikita' — локально для устройства (AUTH-04)
   unlocked: false,
@@ -66,6 +74,7 @@ export async function initStore() {
   }
 
   if (settings) Object.assign(state.settings, settings);
+  setCustomRates(state.settings.customRates);
   state.profile = profile || null;
   state.unlocked = !!unlocked;
   state.ready = true;
@@ -73,6 +82,7 @@ export async function initStore() {
 
 export async function saveSettings(patch) {
   Object.assign(state.settings, patch);
+  setCustomRates(state.settings.customRates);
   await db.setMeta('settings', { ...state.settings });
   notify('settings');
 }

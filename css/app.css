@@ -375,7 +375,7 @@ button svg, .set-row-ico svg { width: 20px; height: 20px; }
 .cat-manage-row:last-child { border-bottom: 0; }
 .cat-manage-row .cat-bar-emoji { flex: none; }
 .cat-manage-name { flex: 1; font-weight: 600; font-size: 14px; }
-.cat-manage-name.hidden-cat { color: var(--ink-3); text-decoration: line-through; }
+.cat-manage-name.hidden-cat, .struck { color: var(--ink-3); text-decoration: line-through; }
 .cat-manage-act { color: var(--ink-2); font-size: 12.5px; font-weight: 600; padding: 6px 8px; }
 .cat-manage-act svg { width: 16px; height: 16px; }
 
