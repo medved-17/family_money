@@ -1,6 +1,6 @@
 // Service worker: офлайн-оболочка приложения (offline-first)
 
-const VERSION = 'v10';
+const VERSION = 'v11';
 const CACHE = `family-money-${VERSION}`;
 const FONT_CACHE = 'family-money-fonts';
 const ASSETS = [

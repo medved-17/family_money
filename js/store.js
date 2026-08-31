@@ -36,10 +36,10 @@ export const state = {
     },
     // выключенные валюты не показываются при добавлении траты (евро включается в настройках)
     hiddenCurrencies: ['EUR'],
+    // «Остаток на дату»: сколько было в каждой валюте на момент balanceAsOf.
+    // Текущий остаток = balances − траты и обмены ПОСЛЕ этой даты. balanceAsOf=null — «с самого начала».
     balances: { USD: 0, TRY: 0, RUB: 0, EUR: 0 },
-    // remainingMode: 'auto' — остаток = запасы − траты ± обмены; 'manual' — сколько осталось вводится вручную
-    remainingMode: 'auto',
-    manualRemaining: { USD: 0, TRY: 0, RUB: 0, EUR: 0 },
+    balanceAsOf: null,
     balancesUpdatedAt: null,
     familySettingsUpdatedAt: null,
   },
@@ -81,6 +81,20 @@ export async function initStore() {
   }
 
   if (settings) Object.assign(state.settings, settings);
+
+  // Миграция со старой схемы (ручной режим / два режима) → «остаток на дату».
+  // Ручной остаток = «сколько осталось на момент, когда ввёл» → это и есть база на дату.
+  if (state.settings.remainingMode === 'manual') {
+    state.settings.balances = { ...(state.settings.manualRemaining || {}) };
+    state.settings.balanceAsOf = state.settings.balanceAsOf
+      || state.settings.balancesUpdatedAt || new Date().toISOString();
+    // помечаем свежим, чтобы новая схема разъехалась по телефонам поверх старой
+    state.settings.balancesUpdatedAt = new Date().toISOString();
+  }
+  delete state.settings.remainingMode;
+  delete state.settings.manualRemaining;
+  await db.setMeta('settings', { ...state.settings });
+
   setCustomRates(state.settings.customRates);
   state.profile = profile || null;
   state.unlocked = !!unlocked;
@@ -106,11 +120,10 @@ export async function saveBalances(balances, updatedAt = new Date().toISOString(
   return saveWallet({ balances }, updatedAt);
 }
 
-// Единое сохранение «кошелька»: запасы, ручной остаток, режим подсчёта
+// Единое сохранение «кошелька»: остаток на дату (balances + balanceAsOf)
 export async function saveWallet(patch, updatedAt = new Date().toISOString()) {
   if (patch.balances) state.settings.balances = { ...state.settings.balances, ...patch.balances };
-  if (patch.manualRemaining) state.settings.manualRemaining = { ...state.settings.manualRemaining, ...patch.manualRemaining };
-  if (patch.remainingMode) state.settings.remainingMode = patch.remainingMode;
+  if ('balanceAsOf' in patch) state.settings.balanceAsOf = patch.balanceAsOf;
   state.settings.balancesUpdatedAt = updatedAt;
   await db.setMeta('settings', { ...state.settings });
   notify('settings');
@@ -277,9 +290,14 @@ export async function mergeRemote(remoteExpenses, remoteCategories, remoteWallet
   if (catWrite.length) await db.putCategories(catWrite);
 
   if (remoteWallet && (remoteWallet.updatedAt || '') > (state.settings.balancesUpdatedAt || '')) {
-    if (remoteWallet.balances) state.settings.balances = { ...state.settings.balances, ...remoteWallet.balances };
-    if (remoteWallet.manualRemaining) state.settings.manualRemaining = { ...state.settings.manualRemaining, ...remoteWallet.manualRemaining };
-    if (remoteWallet.remainingMode) state.settings.remainingMode = remoteWallet.remainingMode;
+    // поддержка и новой схемы (balanceAsOf), и старой (manual) при слиянии с другого телефона
+    if (remoteWallet.remainingMode === 'manual' && remoteWallet.manualRemaining) {
+      state.settings.balances = { ...remoteWallet.manualRemaining };
+      state.settings.balanceAsOf = remoteWallet.balanceAsOf || remoteWallet.updatedAt;
+    } else {
+      if (remoteWallet.balances) state.settings.balances = { ...state.settings.balances, ...remoteWallet.balances };
+      if ('balanceAsOf' in remoteWallet) state.settings.balanceAsOf = remoteWallet.balanceAsOf;
+    }
     state.settings.balancesUpdatedAt = remoteWallet.updatedAt;
     await db.setMeta('settings', { ...state.settings });
     changed = true;
@@ -318,8 +336,7 @@ export function backupJSON() {
       customRates: state.settings.customRates,
       hiddenCurrencies: state.settings.hiddenCurrencies,
       balances: state.settings.balances,
-      remainingMode: state.settings.remainingMode,
-      manualRemaining: state.settings.manualRemaining,
+      balanceAsOf: state.settings.balanceAsOf,
     },
     categories: state.categories,
     expenses: state.expenses,

@@ -11,7 +11,7 @@ import {
 } from './ui.js';
 import { renderSettings } from './settings.js';
 import { exportXlsx, exportPdf } from './export.js';
-import { toast, periodTitle, CUR_SYMBOL, CURRENCIES } from './util.js';
+import { toast, periodTitle, CUR_SYMBOL, CURRENCIES, fmtDay, fmtTime, toLocalInput } from './util.js';
 import { I } from './icons.js';
 import { showPicker, openSheet, closeSheet, closeAllSheets, initPicker, makeDraggable } from './picker.js';
 import { getCustomRate } from './rates.js';
@@ -28,7 +28,7 @@ function injectIcons() {
     b.innerHTML = b.dataset.dir === '-1' ? I.back : I.fwd;
   });
   document.querySelector('#keypad [data-k="back"]').innerHTML = I.back;
-  document.querySelector('.date-chip').insertAdjacentHTML('afterbegin', I.calendar);
+  document.querySelectorAll('.date-chip').forEach(el => el.insertAdjacentHTML('afterbegin', I.calendar));
   $('stats-export-btn').innerHTML = I.download;
   $('export-xlsx').insertAdjacentHTML('afterbegin', I.table);
   $('export-pdf').insertAdjacentHTML('afterbegin', I.doc);
@@ -71,24 +71,20 @@ function parseMoneyInput(value) {
   return parseFloat(clean);
 }
 
-let balanceMode = 'auto';
+let balanceDate = null;   // дата остатка (asOf); null = сейчас
 
 function renderBalanceSheet() {
-  const auto = balanceMode === 'auto';
-  $('balance-title').textContent = auto ? 'Исходные суммы' : 'Сколько осталось';
-  $('balance-hint').textContent = auto
-    ? 'Сколько было в начале. Остаток на главной = запасы − траты ± обмены.'
-    : 'Сколько реально осталось сейчас в каждой валюте. Траты и обмены не пересчитываем — показываем ровно эти числа.';
-  $('balance-mode').querySelectorAll('button').forEach(b =>
-    b.classList.toggle('on', b.dataset.mode === balanceMode));
-  const src = auto ? (state.settings.balances || {}) : (state.settings.manualRemaining || {});
+  const src = state.settings.balances || {};
   for (const cur of ['USD', 'TRY', 'RUB', 'EUR']) {
     $(`balance-${cur}`).value = src[cur] ? String(src[cur]).replace('.', ',') : '';
   }
+  $('balance-date-text').textContent = balanceDate
+    ? `${fmtDay(balanceDate)} ${fmtTime(balanceDate)}` : 'Сейчас';
 }
 
 function openBalanceSheet() {
-  balanceMode = state.settings.remainingMode === 'manual' ? 'manual' : 'auto';
+  balanceDate = state.settings.balanceAsOf ? new Date(state.settings.balanceAsOf) : null;
+  $('balance-date').value = toLocalInput(balanceDate || new Date());
   renderBalanceSheet();
   openSheet($('balance-sheet'));
   setTimeout(() => $('balance-USD').focus(), 180);
@@ -321,11 +317,11 @@ function bindEvents() {
   });
   $('add-delete').addEventListener('click', deleteSheetExpense);
   $('balance-cancel').addEventListener('click', () => closeSheet($('balance-sheet')));
-  $('balance-mode').addEventListener('click', (e) => {
-    const b = e.target.closest('button');
-    if (!b || b.dataset.mode === balanceMode) return;
-    balanceMode = b.dataset.mode;
-    renderBalanceSheet();
+  $('balance-date').addEventListener('change', (e) => {
+    if (e.target.value) { balanceDate = new Date(e.target.value); renderBalanceSheet(); }
+  });
+  $('balance-date').addEventListener('click', (e) => {
+    try { e.target.showPicker?.(); } catch { /* уже открыт или не поддерживается */ }
   });
   $('balance-save').addEventListener('click', async () => {
     const values = {};
@@ -334,15 +330,11 @@ function bindEvents() {
       if (!isFinite(value) || value < 0) { toast('Введите суммы от 0'); return; }
       values[cur] = value;
     }
-    if (balanceMode === 'manual') {
-      await saveWallet({ manualRemaining: values, remainingMode: 'manual' });
-      toast('Остаток сохранён');
-    } else {
-      await saveWallet({ balances: values, remainingMode: 'auto' });
-      toast('Исходные суммы сохранены');
-    }
+    const asOf = (balanceDate || new Date()).toISOString();
+    await saveWallet({ balances: values, balanceAsOf: asOf });
     closeSheet($('balance-sheet'));
     renderHome();
+    toast('Остаток сохранён');
   });
 
   $('keypad').addEventListener('click', (e) => {
