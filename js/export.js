@@ -13,6 +13,7 @@ const stamp = () => new Date().toISOString().slice(0, 10);
 // ─── Excel (11.1): операции построчно + лист сводки ───
 export function exportXlsx(expenses, period) {
   const b = base();
+  expenses = expenses.filter(e => e.kind !== 'exchange');   // обмены — не траты, в таблицу не идут
   const sorted = [...expenses].sort((a, c) => a.spentAt.localeCompare(c.spentAt));
 
   const rows = [
@@ -72,6 +73,7 @@ export function exportXlsx(expenses, period) {
 // ─── PDF (11.2): компактный отчёт ───
 export function exportPdf(expenses, period) {
   const b = base();
+  expenses = expenses.filter(e => e.kind !== 'exchange');   // обмены — не траты, в таблицу не идут
   const s = summarize(expenses, b);
   const p = new ReportPainter();
   const money = v => `${fmtNum(round2(v))} ${CUR_SYMBOL[b]}`;

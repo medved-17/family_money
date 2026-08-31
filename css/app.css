@@ -849,3 +849,68 @@ body, .card, .set-card, .day-card, .stat-tile, .tabbar, .sheet,
   .btn-save { padding: 13px; }
   .sheet-scroll { padding-bottom: 4px; }
 }
+
+/* ═══ Обмен валюты + переключение валют на главной ═══ */
+/* Переключатель тип операции (трата / обмен) — как сегмент-контрол */
+.sheet-kind {
+  display: flex; background: var(--card-2); border-radius: 99px; padding: 3px;
+  margin-bottom: 12px; border: 1px solid var(--hairline);
+}
+.sheet-kind button {
+  flex: 1; padding: 8px 0; border-radius: 99px; font-size: 13px; font-weight: 600;
+  color: var(--ink-2); transition: color .15s;
+}
+.sheet-kind button.on { background: var(--card); color: var(--ink); box-shadow: 0 1px 6px rgba(31,30,29,.10); }
+
+/* Сумма «Потрачено» кликабельна — сброс стилей кнопки + подсказка тапа */
+.total-amount-btn {
+  display: block; width: 100%; padding: 0; background: none; border: 0; color: inherit;
+  text-align: center; cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+.total-amount-btn:active { opacity: .6; }
+
+/* Плавное выцветание карточек при смене валюты */
+#home-total-card, #home-cats-card { transition: opacity .17s ease; }
+.cur-fade { opacity: 0; }
+
+/* Значок ⓘ на карточке остатка (зеркало .card-edit слева) */
+.card-info {
+  position: absolute;
+  top: 12px;
+  left: 12px;
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  font-size: 16px;
+  font-weight: 700;
+  color: rgba(255, 246, 241, .9);
+  background: rgba(255, 246, 241, .12);
+  border: 1px solid rgba(255, 246, 241, .14);
+}
+.card-info:active { opacity: .55; }
+
+/* Пояснение к остатку — плавно проявляется по тапу на ⓘ */
+.remaining-hint {
+  max-height: 0;
+  opacity: 0;
+  overflow: hidden;
+  font-size: 12.5px;
+  line-height: 1.45;
+  text-align: left;
+  color: #FFF6F1;
+  transition: opacity .3s ease, max-height .3s ease, margin-top .3s ease;
+  margin-top: 0;
+}
+.remaining-hint.show {
+  max-height: 140px;
+  opacity: .92;
+  margin-top: 14px;
+}
+
+/* Операция обмена в списке */
+.tx-emoji-exchange { background: rgba(94, 158, 207, .18); }
+.tx-exchange-from { color: var(--ink); font-size: 14px; font-weight: 700; white-space: nowrap; }
+.tx-exchange-to { color: #4F7565; font-size: 12.5px; font-weight: 700; white-space: nowrap; margin-top: 1px; }

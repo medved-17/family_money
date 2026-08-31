@@ -156,6 +156,31 @@ export async function addExpense({ amount, tips, currency, categoryId, note, spe
   return e;
 }
 
+// Обмен валюты — отдельный вид операции (kind: 'exchange'). Не считается тратой,
+// но переносит деньги между валютными «корзинами» в карточке остатка.
+export async function addExchange({ fromCur, fromAmount, toCur, toAmount, note, spentAt }) {
+  const now = new Date().toISOString();
+  const e = {
+    id: uuid(),
+    kind: 'exchange',
+    author: state.profile,
+    fromCur, fromAmount,
+    toCur, toAmount,
+    note: note || '',
+    spentAt: spentAt || now,
+    createdAt: now,
+    updatedAt: now,
+    deleted: false,
+  };
+  state.expenses.push(e);
+  await db.putExpense(e);
+  notify('expenses');
+  queueSync();
+  return e;
+}
+
+export function isExchange(e) { return e && e.kind === 'exchange'; }
+
 export async function updateExpense(id, patch) {
   const e = state.expenses.find(x => x.id === id);
   if (!e) return;
@@ -206,7 +231,10 @@ export async function updateCategory(id, patch) {
 // Частота использования категорий — для умного порядка в форме добавления
 export function categoriesByUsage() {
   const counts = {};
-  for (const e of visibleExpenses()) counts[e.category] = (counts[e.category] || 0) + 1;
+  for (const e of visibleExpenses()) {
+    if (isExchange(e)) continue;
+    counts[e.category] = (counts[e.category] || 0) + 1;
+  }
   return [...visibleCategories()].sort((a, b) => {
     const d = (counts[b.id] || 0) - (counts[a.id] || 0);
     return d !== 0 ? d : (a.sortOrder ?? 99) - (b.sortOrder ?? 99);
