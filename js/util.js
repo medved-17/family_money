@@ -66,8 +66,10 @@ export function periodRange(p) {
   const now = new Date();
   if (p.mode === 'all') return [new Date(2000, 0, 1), new Date(2100, 0, 1)];
   if (p.mode === 'week') {
+    // последние 7 дней, считая сегодня: [сегодня−6 … завтра)
     const start = new Date(now.getFullYear(), now.getMonth(), now.getDate() - 6);
-    return [start, new Date(2100, 0, 1)];
+    const end = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1);
+    return [start, end];
   }
   if (p.mode === 'year') return [new Date(p.year, 0, 1), new Date(p.year + 1, 0, 1)];
   return [new Date(p.year, p.month, 1), new Date(p.year, p.month + 1, 1)];

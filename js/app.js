@@ -212,6 +212,21 @@ function bindEvents() {
       renderStats();
     }));
 
+  // тап по столбцу «Динамики» — подсветить и показать его сумму
+  $('stats-body').addEventListener('click', (e) => {
+    const col = e.target.closest('.bar-col');
+    if (!col) return;
+    const svg = col.closest('svg');
+    svg.querySelectorAll('.bar-col').forEach(c => {
+      const on = c === col;
+      const bar = c.querySelector('.bar');
+      const val = c.querySelector('.bar-val');
+      bar.setAttribute('fill', on ? 'var(--accent)' : 'var(--accent-2)');
+      bar.setAttribute('opacity', on ? '1' : (bar.dataset.op || '0.55'));
+      if (val) val.setAttribute('opacity', on ? '1' : '0');
+    });
+  });
+
   // фильтры истории — красивые пикеры вместо нативных селектов
   const f = ui.historyFilter;
   $('f-period-chip').addEventListener('click', async () => {
