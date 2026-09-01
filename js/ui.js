@@ -25,7 +25,7 @@ export const ui = {
   homePeriod: currentMonth(),
   homeCurrency: null,   // валюта отображения «Потрачено» (null = базовая); переключается тапом
   statsPeriod: currentMonth(),
-  statsMode: 'month',
+  statsMode: 'week',
   historyFilter: { period: 'month', author: '', category: '', currency: '' },
 };
 
@@ -329,6 +329,7 @@ function plural(n, one, few, many) {
 // ─────────────── АНАЛИТИКА ───────────────
 export function statsExpensesAndPeriod() {
   const p = ui.statsMode === 'all' ? { mode: 'all' }
+    : ui.statsMode === 'week' ? { mode: 'week' }
     : ui.statsMode === 'year' ? { mode: 'year', year: ui.statsPeriod.year }
     : ui.statsPeriod;
   return { period: p, expenses: inPeriod(p) };
@@ -337,7 +338,7 @@ export function statsExpensesAndPeriod() {
 export function renderStats() {
   const { period: p, expenses } = statsExpensesAndPeriod();
   $('stats-period-label').textContent = periodTitle(p);
-  $('stats-period-nav').style.visibility = ui.statsMode === 'all' ? 'hidden' : 'visible';
+  $('stats-period-nav').style.visibility = (ui.statsMode === 'all' || ui.statsMode === 'week') ? 'hidden' : 'visible';
   $('stats-seg').querySelectorAll('button').forEach(b =>
     b.classList.toggle('on', b.dataset.mode === ui.statsMode));
 

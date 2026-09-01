@@ -938,3 +938,7 @@ body, .card, .set-card, .day-card, .stat-tile, .tabbar, .sheet,
 .balance-date-field { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
 .balance-date-label { font-size: 13.5px; font-weight: 600; color: var(--ink); }
 .balance-date-chip { flex: none; }
+
+/* Плавная подсветка столбца динамики по тапу */
+.bar { transition: opacity .15s ease, fill .15s ease; }
+.bar-val { transition: opacity .15s ease; }
