@@ -15,6 +15,9 @@ import { openSheet, closeSheet } from './picker.js';
 
 const $ = id => document.getElementById(id);
 
+// цвета валют для карточки «По валютам» (из палитры дизайн-системы)
+const CUR_COLOR = { EUR: '#9C7BD1', USD: '#5E9ECF', TRY: '#4FB3A5', RUB: '#7FA65A' };
+
 // Узкий разделитель тысяч: обычный пробел в моноширинном шрифте слишком широкий
 const narrow = s => String(s).replace(/[\s  ](?=\d)/g, '<span class="gsp"></span>');
 const nMoney = (n, cur) => narrow(fmtMoney(n, cur));
@@ -338,7 +341,8 @@ export function statsExpensesAndPeriod() {
 export function renderStats() {
   const { period: p, expenses } = statsExpensesAndPeriod();
   $('stats-period-label').textContent = periodTitle(p);
-  $('stats-period-nav').style.visibility = (ui.statsMode === 'all' || ui.statsMode === 'week') ? 'hidden' : 'visible';
+  // прячем навигацию по периодам ПОЛНОСТЬЮ (не оставляя пустого места) в режимах «Неделя»/«Всё»
+  $('stats-period-nav').style.display = (ui.statsMode === 'all' || ui.statsMode === 'week') ? 'none' : '';
   $('stats-seg').querySelectorAll('button').forEach(b =>
     b.classList.toggle('on', b.dataset.mode === ui.statsMode));
 
@@ -412,16 +416,26 @@ export function renderStats() {
     </section>` : ''}
 
     <section class="card">
-      <div class="card-head"><h2>По валютам</h2></div>
-      ${[...s.byCur.entries()].sort((a, b) => b[1].base - a[1].base).map(([cur, v]) => `
-        <div class="cur-row">
-          <span><span class="cur-name">${CUR_SYMBOL[cur]} ${cur}</span>
-            <span class="cur-sub"> · ${v.count} ${plural(v.count, 'операция', 'операции', 'операций')}</span></span>
-          <span style="text-align:right">
-            <div class="num">${nMoney(round2(v.orig), cur)}</div>
-            ${cur !== base() ? `<div class="cur-sub num">≈ ${nMoney(round2(v.base), base())}</div>` : ''}
-          </span>
-        </div>`).join('')}
+      <div class="card-head"><h2>По валютам</h2><span class="cur-total num">${nMoney(round2(s.total), base())}</span></div>
+      <div class="cur-list">
+      ${[...s.byCur.entries()].sort((a, b) => b[1].base - a[1].base).map(([cur, v]) => {
+        const pct = s.total > 0 ? Math.round(v.base / s.total * 100) : 0;
+        const rate = v.orig ? v.base / v.orig : 0;
+        const color = CUR_COLOR[cur] || 'var(--accent-2)';
+        return `
+        <div class="cur-item">
+          <div class="cur-item-top">
+            <span class="cur-badge" style="background:${color}1f;color:${color}">${CUR_SYMBOL[cur]} ${cur}</span>
+            <span class="cur-amount num">${nMoney(round2(v.orig), cur)}</span>
+          </div>
+          <div class="cur-bar"><span class="cur-bar-fill" style="width:${Math.max(pct, 2)}%;background:${color}"></span></div>
+          <div class="cur-item-sub">
+            <span>${v.count} ${plural(v.count, 'операция', 'операции', 'операций')}${cur !== base() ? ` · 1 ${CUR_SYMBOL[cur]} ≈ ${fmtNum(rate, 2)} ${CUR_SYMBOL[base()]}` : ''}</span>
+            <span class="num">${cur !== base() ? `≈ ${nMoney(round2(v.base), base())} · ` : ''}${pct}%</span>
+          </div>
+        </div>`;
+      }).join('')}
+      </div>
     </section>
     ` : emptyBlock('📭', 'Нет данных за выбранный период')}
   `;

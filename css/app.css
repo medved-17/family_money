@@ -435,14 +435,26 @@ button svg, .set-row-ico svg { width: 20px; height: 20px; }
 .chart-wrap svg { display: block; width: 100%; height: auto; }
 .chart-caption { font-size: 12px; color: var(--ink-2); text-align: center; margin-top: 8px; }
 
-.cur-row {
-  display: flex; justify-content: space-between; align-items: center;
-  padding: 10px 0; border-bottom: 1px solid var(--hairline); font-size: 14px;
+/* ═══ По валютам ═══ */
+.cur-total { font-family: var(--mono); font-size: 12.5px; font-weight: 700; color: var(--ink-2); }
+.cur-list { display: flex; flex-direction: column; gap: 15px; }
+.cur-item-top {
+  display: flex; justify-content: space-between; align-items: center; gap: 10px;
+  margin-bottom: 7px;
 }
-.cur-row:last-child { border-bottom: 0; }
-.cur-row .cur-name { font-weight: 700; }
-.cur-row .cur-sub { font-size: 11.5px; color: var(--ink-2); }
-.cur-row .num { font-weight: 700; font-size: 13px; }
+.cur-badge {
+  display: inline-flex; align-items: center; gap: 5px;
+  padding: 3px 10px; border-radius: 99px;
+  font-family: var(--mono); font-size: 12.5px; font-weight: 800; letter-spacing: .01em;
+}
+.cur-amount { font-size: 15px; font-weight: 800; white-space: nowrap; }
+.cur-bar { height: 6px; border-radius: 4px; background: var(--card-2); overflow: hidden; }
+.cur-bar-fill { display: block; height: 100%; border-radius: 4px; animation: growBar .55s cubic-bezier(.2,.8,.3,1); }
+.cur-item-sub {
+  display: flex; justify-content: space-between; align-items: baseline; gap: 10px;
+  margin-top: 6px; font-size: 11.5px; color: var(--ink-2);
+}
+.cur-item-sub .num { font-weight: 700; color: var(--ink-2); white-space: nowrap; }
 
 /* ═══ Настройки ═══ */
 .set-group { margin-bottom: 18px; }
